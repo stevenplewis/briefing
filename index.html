@@ -1,0 +1,1046 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>briefing — your daily reddit digest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Quintessential&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0c10;
+    --surface: #12151c;
+    --border: #1c2030;
+    --border-hover: #2a3048;
+    --text-primary: #e8eaf0;
+    --text-secondary: #7a8194;
+    --text-muted: #464d62;
+    --accent-cyan: #4dcfcf;
+    --accent-amber: #d4a054;
+    --accent-rose: #cf6679;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text-primary);
+    font-family: 'DM Sans', system-ui, sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Subtle grain overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    opacity: 0.025;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  .app { max-width: 620px; margin: 0 auto; padding: 0 20px; }
+
+  /* ── Header ── */
+  header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(10, 12, 16, 0.82);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border-bottom: 1px solid var(--border);
+    margin: 0 -20px;
+    padding: 0 20px;
+  }
+
+  .header-inner { padding: 18px 0 14px; }
+
+  .header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 14px;
+  }
+
+  .logo {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 26px;
+    font-weight: 400;
+    font-style: italic;
+    letter-spacing: -0.02em;
+    color: var(--accent-cyan);
+  }
+
+  .header-meta {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    margin-top: 4px;
+  }
+
+  .header-actions { display: flex; gap: 6px; align-items: center; }
+
+  .btn-small {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 5px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .btn-small:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+  .btn-icon {
+    width: 30px; height: 30px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+  .btn-icon:hover { border-color: var(--border-hover); color: var(--text-primary); }
+
+  /* ── Progress ── */
+  .progress-track {
+    height: 2px;
+    background: var(--border);
+    border-radius: 1px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-amber));
+    border-radius: 1px;
+    transition: width 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  /* ── Settings Panel ── */
+  .settings {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height 0.35s ease, opacity 0.25s ease;
+  }
+  .settings.open { max-height: 300px; opacity: 1; }
+
+  .settings-inner { padding: 16px 0 6px; }
+
+  .setting-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .setting-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    min-width: 80px;
+  }
+  .setting-options { display: flex; gap: 4px; flex-wrap: wrap; }
+
+  .pill {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pill:hover { color: var(--text-primary); }
+  .pill.active {
+    color: var(--text-primary);
+    border-color: var(--border-hover);
+    background: var(--surface);
+  }
+
+  .subreddit-input-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 4px;
+  }
+  .subreddit-input {
+    flex: 1;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 8px 12px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    color: var(--text-primary);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .subreddit-input:focus { border-color: var(--accent-cyan); }
+  .subreddit-input::placeholder { color: var(--text-muted); }
+
+  /* ── Subreddit Tags ── */
+  .sub-tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 18px 0 10px;
+  }
+  .sub-tag {
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    border: none;
+    cursor: default;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+  }
+  .sub-tag .remove-sub {
+    margin-left: 4px;
+    cursor: pointer;
+    opacity: 0.5;
+    transition: opacity 0.15s;
+  }
+  .sub-tag .remove-sub:hover { opacity: 1; }
+
+  /* ── Loading ── */
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 50vh;
+    gap: 16px;
+  }
+  .spinner {
+    width: 24px; height: 24px;
+    border: 2px solid var(--border);
+    border-top-color: var(--accent-cyan);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .loading-text {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  /* ── Error ── */
+  .error-banner {
+    margin: 16px 0;
+    padding: 12px 16px;
+    background: rgba(207, 102, 121, 0.08);
+    border: 1px solid rgba(207, 102, 121, 0.2);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--accent-rose);
+  }
+
+  /* ── Post Card ── */
+  .post-card {
+    padding: 20px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeUp 0.4s ease both;
+    transition: opacity 0.4s ease;
+  }
+  .post-card:last-child { border-bottom: none; }
+  .post-card.read { opacity: 0.35; transition: opacity 0.6s ease; }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .post-layout {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  .post-score {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 44px;
+    padding-top: 1px;
+  }
+  .post-score .arrow {
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-bottom: 7px solid currentColor;
+    margin-bottom: 4px;
+    opacity: 0.6;
+  }
+  .post-score .num {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    font-weight: 500;
+    line-height: 1;
+  }
+
+  .post-content { flex: 1; min-width: 0; }
+
+  .post-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+  }
+
+  .post-sub {
+    font-family: 'DM Mono', monospace;
+    font-size: 10.5px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 3px;
+  }
+
+  .post-flair {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 3px;
+  }
+
+  .post-time {
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .post-title {
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 1.25;
+    color: var(--text-primary);
+    cursor: pointer;
+    margin-bottom: 8px;
+    transition: color 0.15s;
+    text-decoration: none;
+    display: block;
+  }
+  .post-title:hover { color: var(--accent-cyan); }
+  .post-card.read .post-title { color: var(--text-secondary); }
+
+  .post-selftext {
+    font-size: 13.5px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin-bottom: 8px;
+    padding-left: 12px;
+    border-left: 2px solid var(--border);
+    font-family: 'DM Sans', sans-serif;
+  }
+
+  .post-thumbnail {
+    margin: 10px 0;
+    border-radius: var(--radius);
+    max-width: 100%;
+    max-height: 300px;
+    object-fit: cover;
+    border: 1px solid var(--border);
+  }
+
+  .post-footer {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .post-comments {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .post-comments:hover { color: var(--text-secondary); }
+
+  .post-link {
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text-muted);
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+  .post-link:hover { color: var(--accent-cyan); }
+
+  .mark-read-btn {
+    font-family: 'DM Mono', monospace;
+    font-size: 10px;
+    color: var(--text-muted);
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    transition: color 0.15s;
+  }
+  .mark-read-btn:hover { color: var(--text-secondary); }
+
+  /* ── End / Completion ── */
+  .end-marker {
+    text-align: center;
+    padding: 40px 0 60px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    color: var(--text-muted);
+  }
+
+  .completion {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 55vh;
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeUp 0.6s ease;
+  }
+  .completion-icon {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent-cyan), var(--accent-amber));
+    display: flex; align-items: center; justify-content: center;
+    margin-bottom: 24px;
+    animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  @keyframes popIn {
+    from { transform: scale(0.4); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .completion h2 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 28px;
+    font-weight: 400;
+    color: var(--text-primary);
+    margin-bottom: 8px;
+  }
+  .completion p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 340px;
+    line-height: 1.6;
+    margin-bottom: 28px;
+  }
+  .completion button {
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    padding: 10px 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .completion button:hover {
+    border-color: var(--border-hover);
+    color: var(--text-primary);
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 80px 20px;
+  }
+  .empty-state h3 {
+    font-family: 'Instrument Serif', Georgia, serif;
+    font-size: 22px;
+    font-weight: 400;
+    margin-bottom: 8px;
+    color: var(--text-primary);
+  }
+  .empty-state p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    max-width: 360px;
+    margin: 0 auto;
+    line-height: 1.6;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  @media (max-width: 480px) {
+    .post-title { font-size: 24px; }
+    .logo { font-size: 22px; }
+    .post-score { min-width: 36px; }
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// CONFIG — Edit your subreddits here!
+// ═══════════════════════════════════════════
+const DEFAULT_SUBS = [
+  "webdev",
+  "science",
+  "space",
+  "technology",
+  "90s",
+  "accidentalrenaissance",
+  "analog",
+  "animalsbeingbros",
+  "animalsbeingderps",
+  "anticonsumption",
+  "apple",
+  "bayarea",
+  "boardgames",
+  "coolguides",
+  "damnthatsinteresting",
+  "dataisbeautiful",
+  "historyporn",
+  "humansbeingbros",
+  "interestingasfuck",
+  "isthisai",
+  "jeffrosenstock",
+  "law",
+  "mademesmile",
+  "millennials",
+  "moodcamera",
+  "mothershiprpg",
+  "moviedetails",
+  "murderedbywords",
+  "n64",
+  "nasa",
+  "newgirl",
+  "natureisfuckinglit",
+  "obscuremusicthatslaps",
+  "oceansarefuckinglit",
+  "oddlysatisfying",
+  "oldschoolcool",
+  "outoftheloop",
+  "sanfrancisco",
+  "severanceappletvplus",
+  "streetphotography",
+  "thatsinsane",
+  "thedepthsbelow",
+  "theydidthemath",
+  "todayilearned",
+  "tvdetails",
+  "twinpeaks",
+  "underratedmovies",
+  "woahdude",
+  "worldnews",
+  "design",
+];
+
+const SUB_COLORS = [
+  "#4dcfcf", "#d4a054", "#cf6679", "#7ec8a0",
+  "#9b8ed4", "#e09550", "#5ea8d6", "#d47ba0",
+  "#85b86e", "#c4a35a", "#6b9fd4", "#d4736b",
+];
+
+function getSubColor(sub) {
+  let hash = 0;
+  for (let i = 0; i < sub.length; i++) hash = sub.charCodeAt(i) + ((hash << 5) - hash);
+  return SUB_COLORS[Math.abs(hash) % SUB_COLORS.length];
+}
+
+// ═══════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════
+let state = {
+  subreddits: JSON.parse(localStorage.getItem('briefing_subs') || 'null') || [...DEFAULT_SUBS],
+  posts: [],
+  readPosts: new Set(JSON.parse(localStorage.getItem('briefing_read') || '[]')),
+  loading: false,
+  error: null,
+  settingsOpen: false,
+  sortBy: localStorage.getItem('briefing_sort') || 'score',
+  digestSize: 25,
+  timeRange: localStorage.getItem('briefing_time') || 'day',
+  isComplete: false,
+  lastFetch: localStorage.getItem('briefing_lastfetch') || null,
+};
+
+function saveSubs() { localStorage.setItem('briefing_subs', JSON.stringify(state.subreddits)); }
+function saveRead() { localStorage.setItem('briefing_read', JSON.stringify([...state.readPosts])); }
+function savePrefs() {
+  localStorage.setItem('briefing_sort', state.sortBy);
+  localStorage.setItem('briefing_limit', state.digestSize);
+  localStorage.setItem('briefing_time', state.timeRange);
+}
+
+// ═══════════════════════════════════════════
+// FETCH REDDIT DATA
+// ═══════════════════════════════════════════
+
+// Reddit blocks direct browser requests (CORS). We use a lightweight proxy.
+// Options — pick one that works for you:
+//   1. https://corsproxy.io/?url=  (free, public)
+//   2. Run your own: npx local-cors-proxy --proxyUrl https://www.reddit.com --port 8010
+//      then set CORS_PROXY = 'http://localhost:8010/'
+const CORS_PROXY = 'https://corsproxy.io/?url=';
+
+async function fetchSubreddit(sub, timeRange) {
+  const redditUrl = timeRange === 'hot'
+    ? `https://www.reddit.com/r/${sub}/hot.json?limit=5&raw_json=1`
+    : `https://www.reddit.com/r/${sub}/top.json?t=${timeRange}&limit=5&raw_json=1`;
+
+  const resp = await fetch(CORS_PROXY + encodeURIComponent(redditUrl));
+
+  if (!resp.ok) throw new Error(`Failed to fetch r/${sub}: ${resp.status}`);
+  const data = await resp.json();
+
+  return (data.data?.children || []).map(child => {
+    const d = child.data;
+    return {
+      id: d.id,
+      subreddit: d.subreddit,
+      title: d.title,
+      author: d.author,
+      score: d.score,
+      comments: d.num_comments,
+      created: d.created_utc,
+      selftext: (d.selftext || '').slice(0, 300),
+      url: d.url,
+      permalink: `https://www.reddit.com${d.permalink}`,
+      thumbnail: (d.thumbnail && d.thumbnail.startsWith('http'))
+        ? d.thumbnail : null,
+      preview: d.preview?.images?.[0]?.source?.url?.replace(/&amp;/g, '&') || null,
+      post_hint: d.post_hint || null,
+      flair: d.link_flair_text || null,
+      is_self: d.is_self,
+      domain: d.domain,
+    };
+  });
+}
+
+async function fetchAllPosts() {
+  state.loading = true;
+  state.error = null;
+  state.posts = [];
+  state.isComplete = false;
+  render();
+
+  try {
+    // Fetch with stagger to avoid rate limiting
+    const results = [];
+    for (let i = 0; i < state.subreddits.length; i++) {
+      try {
+        state.loadingSub = state.subreddits[i];
+        state.loadingProgress = `${i + 1}/${state.subreddits.length}`;
+        render();
+        const posts = await fetchSubreddit(state.subreddits[i], state.timeRange);
+        results.push(...posts);
+        // Delay between requests — longer with many subs
+        if (i < state.subreddits.length - 1) {
+          await new Promise(r => setTimeout(r, 400));
+        }
+      } catch (e) {
+        console.warn(`Skipping r/${state.subreddits[i]}:`, e.message);
+      }
+    }
+    state.loadingSub = null;
+    state.loadingProgress = null;
+
+    // Deduplicate by id
+    const seen = new Set();
+    state.posts = results.filter(p => {
+      if (seen.has(p.id)) return false;
+      seen.add(p.id);
+      return true;
+    });
+
+    state.lastFetch = new Date().toISOString();
+    localStorage.setItem('briefing_lastfetch', state.lastFetch);
+
+  } catch (e) {
+    state.error = e.message;
+  }
+
+  state.loading = false;
+  render();
+}
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+function formatScore(n) {
+  if (n >= 100000) return (n / 1000).toFixed(0) + 'k';
+  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
+  return n;
+}
+
+function timeAgo(utc) {
+  const diff = Date.now() / 1000 - utc;
+  if (diff < 3600) return Math.floor(diff / 60) + 'm';
+  if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+  return Math.floor(diff / 86400) + 'd';
+}
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function getSortedPosts() {
+  const MAX_PER_SUB = 2;
+
+  // If sorting by 'new', skip normalization — just enforce the sub cap
+  if (state.sortBy === 'new') {
+    const subCount = {};
+    return [...state.posts]
+      .sort((a, b) => b.created - a.created)
+      .filter(p => {
+        subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
+        return subCount[p.subreddit] <= MAX_PER_SUB;
+      })
+      .slice(0, state.digestSize);
+  }
+
+  // Calculate per-subreddit average score for normalization
+  const subScores = {};
+  state.posts.forEach(p => {
+    if (!subScores[p.subreddit]) subScores[p.subreddit] = { total: 0, count: 0 };
+    subScores[p.subreddit].total += p.score;
+    subScores[p.subreddit].count += 1;
+  });
+
+  const subAvg = {};
+  for (const [sub, data] of Object.entries(subScores)) {
+    subAvg[sub] = data.count > 0 ? data.total / data.count : 1;
+  }
+
+  // Normalized score = how many multiples of the sub's average this post is
+  // Then blend with raw score so truly massive posts still rank high
+  const scored = state.posts.map(p => {
+    const avg = subAvg[p.subreddit] || 1;
+    const normalized = p.score / Math.max(avg, 1);
+    // Blend: 70% normalized, 30% log-scaled raw score
+    const rawFactor = Math.log10(Math.max(p.score, 1)) / 5;
+    const field = state.sortBy === 'comments' ? p.comments : p.score;
+    const fieldAvg = state.sortBy === 'comments'
+      ? (subScores[p.subreddit]?.count > 0
+          ? state.posts.filter(x => x.subreddit === p.subreddit).reduce((s, x) => s + x.comments, 0) / subScores[p.subreddit].count
+          : 1)
+      : avg;
+    const fieldNorm = field / Math.max(fieldAvg, 1);
+    const blended = fieldNorm * 0.7 + rawFactor * 0.3;
+    return { ...p, _blended: blended };
+  });
+
+  // Sort by blended score, then enforce per-sub cap
+  scored.sort((a, b) => b._blended - a._blended);
+
+  const subCount = {};
+  return scored.filter(p => {
+    subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
+    return subCount[p.subreddit] <= MAX_PER_SUB;
+  }).slice(0, state.digestSize);
+}
+
+// ═══════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════
+function markRead(id) {
+  state.readPosts.add(id);
+  saveRead();
+  checkCompletion();
+  render();
+}
+
+function markAllRead() {
+  getSortedPosts().forEach(p => state.readPosts.add(p.id));
+  saveRead();
+  checkCompletion();
+  render();
+}
+
+function checkCompletion() {
+  const posts = getSortedPosts();
+  if (posts.length > 0 && posts.every(p => state.readPosts.has(p.id))) {
+    setTimeout(() => { state.isComplete = true; render(); }, 600);
+  }
+}
+
+function resetDigest() {
+  state.readPosts.clear();
+  state.isComplete = false;
+  saveRead();
+  fetchAllPosts();
+}
+
+function addSubreddit(name) {
+  const clean = name.trim().toLowerCase().replace(/^r\//, '');
+  if (clean && !state.subreddits.includes(clean)) {
+    state.subreddits.push(clean);
+    saveSubs();
+    render();
+  }
+}
+
+function removeSubreddit(name) {
+  state.subreddits = state.subreddits.filter(s => s !== name);
+  saveSubs();
+  render();
+}
+
+function setSortBy(val) {
+  state.sortBy = val;
+  savePrefs();
+  render();
+}
+
+function setDigestSize(val) {
+  state.digestSize = val;
+  savePrefs();
+  render();
+}
+
+function setTimeRange(val) {
+  state.timeRange = val;
+  savePrefs();
+  render();
+}
+
+function toggleSettings() {
+  state.settingsOpen = !state.settingsOpen;
+  render();
+}
+
+// ═══════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════
+function render() {
+  const posts = getSortedPosts();
+  const readCount = posts.filter(p => state.readPosts.has(p.id)).length;
+  const pct = posts.length > 0 ? (readCount / posts.length) * 100 : 0;
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  let html = `
+    <header>
+      <div class="header-inner">
+        <div class="header-top">
+          <div>
+            <div class="logo">briefing</div>
+            <div class="header-meta">${dateStr} · ${posts.length} posts · ${readCount} read</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn-small" onclick="markAllRead()">mark all read</button>
+            <button class="btn-small" onclick="resetDigest()">refresh</button>
+            <button class="btn-icon" onclick="toggleSettings()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
+                <circle cx="8" cy="6" r="2" fill="currentColor"/><circle cx="16" cy="12" r="2" fill="currentColor"/><circle cx="10" cy="18" r="2" fill="currentColor"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+        <div class="progress-track">
+          <div class="progress-fill" style="width: ${pct}%"></div>
+        </div>
+
+        <div class="settings ${state.settingsOpen ? 'open' : ''}">
+          <div class="settings-inner">
+            <div class="setting-row">
+              <span class="setting-label">sort by</span>
+              <div class="setting-options">
+                ${[['score','top'],['comments','discussed'],['new','newest']].map(([val, label]) =>
+                  `<button class="pill ${state.sortBy===val?'active':''}" onclick="setSortBy('${val}')">${label}</button>`
+                ).join('')}
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">time range</span>
+              <div class="setting-options">
+                ${[['hot','hot'],['day','today'],['week','this week']].map(([val, label]) =>
+                  `<button class="pill ${state.timeRange===val?'active':''}" onclick="setTimeRange('${val}')">${label}</button>`
+                ).join('')}
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">subreddits</span>
+              <div class="subreddit-input-row" style="flex:1">
+                <input class="subreddit-input" id="subInput" type="text"
+                  placeholder="add subreddit, e.g. machinelearning"
+                  onkeydown="if(event.key==='Enter'){addSubreddit(this.value);this.value='';}" />
+                <button class="btn-small" onclick="const i=document.getElementById('subInput');addSubreddit(i.value);i.value='';">add</button>
+              </div>
+            </div>
+            <div class="sub-tags">
+              ${state.subreddits.map(sub => {
+                const c = getSubColor(sub);
+                return `<span class="sub-tag" style="background:${c}15;color:${c}">
+                  r/${escapeHtml(sub)}<span class="remove-sub" onclick="removeSubreddit('${escapeHtml(sub)}')">&times;</span>
+                </span>`;
+              }).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    </header>
+  `;
+
+  // Loading
+  if (state.loading) {
+    html += `<div class="loading-state">
+      <div class="spinner"></div>
+      <span class="loading-text">fetching your digest…${state.loadingSub ? ` r/${state.loadingSub} (${state.loadingProgress})` : ''}</span>
+    </div>`;
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
+
+  // Error
+  if (state.error) {
+    html += `<div class="error-banner">${escapeHtml(state.error)}</div>`;
+  }
+
+  // Empty state
+  if (!state.loading && posts.length === 0 && !state.error) {
+    html += `<div class="empty-state">
+      <h3>No posts yet</h3>
+      <p>Hit "refresh" to fetch today's digest from your subreddits, or add more subreddits in settings.</p>
+    </div>`;
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
+
+  // Completion screen
+  if (state.isComplete) {
+    html += `<div class="completion">
+      <div class="completion-icon">
+        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
+          <path d="M20 6L9 17l-5-5"/>
+        </svg>
+      </div>
+      <h2>You're all caught up.</h2>
+      <p>${posts.length} posts from ${state.subreddits.length} subreddits, read and done. Go enjoy your day.</p>
+      <button onclick="resetDigest()">refresh digest</button>
+    </div>`;
+    document.getElementById('app').innerHTML = html;
+    return;
+  }
+
+  // Post cards
+  posts.forEach((post, i) => {
+    const isRead = state.readPosts.has(post.id);
+    const c = getSubColor(post.subreddit);
+
+    html += `
+    <div class="post-card ${isRead ? 'read' : ''}" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
+      <div class="post-layout">
+        <div class="post-score">
+          <div class="arrow" style="color:${c}"></div>
+          <span class="num" style="color:${c}">${formatScore(post.score)}</span>
+        </div>
+        <div class="post-content">
+          <div class="post-meta">
+            <span class="post-sub" style="background:${c}15;color:${c}">r/${escapeHtml(post.subreddit)}</span>
+            ${post.flair ? `<span class="post-flair">${escapeHtml(post.flair)}</span>` : ''}
+            <span class="post-time">${timeAgo(post.created)} · u/${escapeHtml(post.author)}</span>
+          </div>
+          <a class="post-title" href="${post.is_self ? escapeHtml(post.permalink) : escapeHtml(post.url)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">${escapeHtml(post.title)}</a>
+          ${post.selftext ? `<div class="post-selftext" style="border-color:${c}40">${escapeHtml(post.selftext)}${post.selftext.length >= 300 ? '…' : ''}</div>` : ''}
+          ${post.preview && (post.post_hint === 'image' || post.post_hint === 'rich:video' || post.post_hint === 'link') ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.preview)}" alt="" loading="lazy"></a>` : (post.thumbnail && !post.selftext ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.thumbnail)}" alt="" loading="lazy"></a>` : '')}
+          <div class="post-footer">
+            <a class="post-comments" href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              ${post.comments} comments
+            </a>
+            ${!post.is_self ? `<a class="post-link" href="${escapeHtml(post.url)}" target="_blank" rel="noopener">${escapeHtml(post.domain)}</a>` : ''}
+            ${!isRead ? `<button class="mark-read-btn" onclick="event.stopPropagation();markRead('${post.id}')">mark read</button>` : ''}
+          </div>
+        </div>
+      </div>
+    </div>`;
+  });
+
+  html += `<div class="end-marker">— end of digest —</div>`;
+
+  document.getElementById('app').innerHTML = html;
+  attachScrollObserver();
+}
+
+// ═══════════════════════════════════════════
+// SCROLL-BASED AUTO-READ
+// ═══════════════════════════════════════════
+let scrollObserver = null;
+
+function attachScrollObserver() {
+  // Disconnect previous observer
+  if (scrollObserver) scrollObserver.disconnect();
+
+  // rootMargin: trigger when the post's bottom edge is 50px above the top of the viewport
+  scrollObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const id = entry.target.dataset.postId;
+      if (!id) return;
+      // When the post leaves the viewport going UP (not visible, and above viewport)
+      if (!entry.isIntersecting && entry.boundingClientRect.bottom < 100) {
+        if (!state.readPosts.has(id)) {
+          state.readPosts.add(id);
+          saveRead();
+          entry.target.classList.add('read');
+          checkCompletion();
+          // Update the header read count without full re-render
+          updateReadCount();
+        }
+      }
+    });
+  }, {
+    threshold: 0,
+    rootMargin: '0px 0px 0px 0px'
+  });
+
+  // Observe all unread post cards
+  document.querySelectorAll('.post-card:not(.read)').forEach(el => {
+    scrollObserver.observe(el);
+  });
+}
+
+function updateReadCount() {
+  const posts = getSortedPosts();
+  const readCount = posts.filter(p => state.readPosts.has(p.id)).length;
+  const pct = posts.length > 0 ? (readCount / posts.length) * 100 : 0;
+  // Update progress bar
+  const fill = document.querySelector('.progress-fill');
+  if (fill) fill.style.width = pct + '%';
+  // Update meta text
+  const meta = document.querySelector('.header-meta');
+  if (meta) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    meta.textContent = `${dateStr} · ${posts.length} posts · ${readCount} read`;
+  }
+}
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+render();
+fetchAllPosts();
+</script>
+</body>
+</html>
