@@ -44,7 +44,6 @@ All configurable via the settings panel:
 |---------|---------|---------|
 | Sort by | Top / Discussed / Newest | Top |
 | Time range | Hot / Today / This week | Today |
-| Post limit | 10 / 15 / 20 / 30 | 20 |
 
 ## Architecture
 
