@@ -591,19 +591,15 @@ function savePrefs() {
 // FETCH REDDIT DATA
 // ═══════════════════════════════════════════
 
-// Reddit blocks direct browser requests (CORS). We use a lightweight proxy.
-// Options — pick one that works for you:
-//   1. https://corsproxy.io/?url=  (free, public)
-//   2. Run your own: npx local-cors-proxy --proxyUrl https://www.reddit.com --port 8010
-//      then set CORS_PROXY = 'http://localhost:8010/'
-const CORS_PROXY = 'https://corsproxy.io/?url=';
+// Your own Cloudflare Worker proxy — no more flaky public CORS proxies
+const PROXY_BASE = 'https://reddit-proxy.steven-413.workers.dev';
 
 async function fetchSubreddit(sub, timeRange) {
-  const redditUrl = timeRange === 'hot'
-    ? `https://www.reddit.com/r/${sub}/hot.json?limit=5&raw_json=1`
-    : `https://www.reddit.com/r/${sub}/top.json?t=${timeRange}&limit=5&raw_json=1`;
+  const path = timeRange === 'hot'
+    ? `/r/${sub}/hot.json?limit=5&raw_json=1`
+    : `/r/${sub}/top.json?t=${timeRange}&limit=5&raw_json=1`;
 
-  const resp = await fetch(CORS_PROXY + encodeURIComponent(redditUrl));
+  const resp = await fetch(PROXY_BASE + path);
 
   if (!resp.ok) throw new Error(`Failed to fetch r/${sub}: ${resp.status}`);
   const data = await resp.json();
