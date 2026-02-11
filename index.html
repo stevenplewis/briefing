@@ -132,7 +132,7 @@
     opacity: 0;
     transition: max-height 0.35s ease, opacity 0.25s ease;
   }
-  .settings.open { max-height: 300px; opacity: 1; }
+  .settings.open { max-height: 800px; opacity: 1; }
 
   .settings-inner { padding: 16px 0 6px; }
 
@@ -498,13 +498,55 @@
 // CONFIG — Edit your subreddits here!
 // ═══════════════════════════════════════════
 const DEFAULT_SUBS = [
-  "programming",
   "webdev",
-  "javascript",
   "science",
   "space",
   "technology",
-  "gamedev",
+  "90s",
+  "accidentalrenaissance",
+  "analog",
+  "animalsbeingbros",
+  "animalsbeingderps",
+  "anticonsumption",
+  "apple",
+  "bayarea",
+  "boardgames",
+  "coolguides",
+  "damnthatsinteresting",
+  "dataisbeautiful",
+  "historyporn",
+  "humansbeingbros",
+  "interestingasfuck",
+  "isthisai",
+  "jeffrosenstock",
+  "law",
+  "mademesmile",
+  "millennials",
+  "moodcamera",
+  "mothershiprpg",
+  "moviedetails",
+  "murderedbywords",
+  "n64",
+  "nasa",
+  "newgirl",
+  "natureisfuckinglit",
+  "obscuremusicthatslaps",
+  "oceansarefuckinglit",
+  "oddlysatisfying",
+  "oldschoolcool",
+  "outoftheloop",
+  "sanfrancisco",
+  "severanceappletvplus",
+  "streetphotography",
+  "thatsinsane",
+  "thedepthsbelow",
+  "theydidthemath",
+  "todayilearned",
+  "tvdetails",
+  "twinpeaks",
+  "underratedmovies",
+  "woahdude",
+  "worldnews",
   "design",
 ];
 
@@ -752,9 +794,9 @@ function markRead(id) {
 }
 
 function markAllRead() {
-  getSortedPosts().forEach(p => state.readPosts.add(p.id));
+  // Mark every fetched post as read, not just the visible ones
+  state.posts.forEach(p => state.readPosts.add(p.id));
   saveRead();
-  checkCompletion();
   render();
 }
 
