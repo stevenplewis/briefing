@@ -732,10 +732,13 @@ function escapeHtml(str) {
 function getSortedPosts() {
   const MAX_PER_SUB = 2;
 
+  // Only show unread posts
+  const unread = state.posts.filter(p => !state.readPosts.has(p.id));
+
   // If sorting by 'new', skip normalization — just enforce the sub cap
   if (state.sortBy === 'new') {
     const subCount = {};
-    return [...state.posts]
+    return [...unread]
       .sort((a, b) => b.created - a.created)
       .filter(p => {
         subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
@@ -744,7 +747,7 @@ function getSortedPosts() {
       .slice(0, state.digestSize);
   }
 
-  // Calculate per-subreddit average score for normalization
+  // Calculate per-subreddit average score for normalization (using ALL posts for accurate averages)
   const subScores = {};
   state.posts.forEach(p => {
     if (!subScores[p.subreddit]) subScores[p.subreddit] = { total: 0, count: 0 };
@@ -757,8 +760,7 @@ function getSortedPosts() {
     subAvg[sub] = data.count > 0 ? data.total / data.count : 1;
   }
 
-  // Score unread posts normally, give read posts a heavy penalty so they sink to the bottom
-  const scored = state.posts.map(p => {
+  const scored = unread.map(p => {
     const avg = subAvg[p.subreddit] || 1;
     const rawFactor = Math.log10(Math.max(p.score, 1)) / 5;
     const field = state.sortBy === 'comments' ? p.comments : p.score;
@@ -769,20 +771,13 @@ function getSortedPosts() {
       : avg;
     const fieldNorm = field / Math.max(fieldAvg, 1);
     const blended = fieldNorm * 0.7 + rawFactor * 0.3;
-    const isRead = state.readPosts.has(p.id);
-    return { ...p, _blended: blended, _isRead: isRead };
+    return { ...p, _blended: blended };
   });
 
-  // Sort: unread first (by score), then read (by score)
-  scored.sort((a, b) => {
-    if (a._isRead !== b._isRead) return a._isRead ? 1 : -1;
-    return b._blended - a._blended;
-  });
+  scored.sort((a, b) => b._blended - a._blended);
 
-  // Enforce per-sub cap (only counting unread toward the cap)
   const subCount = {};
   return scored.filter(p => {
-    if (p._isRead) return true; // always show read posts (faded)
     subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
     return subCount[p.subreddit] <= MAX_PER_SUB;
   }).slice(0, state.digestSize);
@@ -868,7 +863,7 @@ function render() {
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
 
-  const unreadCount = posts.filter(p => !state.readPosts.has(p.id)).length;
+  const unreadCount = posts.length;
 
   // Show when data was last fetched
   let fetchInfo = '';
@@ -985,10 +980,9 @@ function render() {
   // Post cards
   posts.forEach((post, i) => {
     const c = getSubColor(post.subreddit);
-    const isRead = state.readPosts.has(post.id);
 
     html += `
-    <div class="post-card ${isRead ? 'read' : ''}" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
+    <div class="post-card" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
       <div class="post-layout">
         <div class="post-score">
           <div class="arrow" style="color:${c}"></div>
