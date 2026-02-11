@@ -498,55 +498,13 @@
 // CONFIG — Edit your subreddits here!
 // ═══════════════════════════════════════════
 const DEFAULT_SUBS = [
+  "programming",
   "webdev",
+  "javascript",
   "science",
   "space",
   "technology",
-  "90s",
-  "accidentalrenaissance",
-  "analog",
-  "animalsbeingbros",
-  "animalsbeingderps",
-  "anticonsumption",
-  "apple",
-  "bayarea",
-  "boardgames",
-  "coolguides",
-  "damnthatsinteresting",
-  "dataisbeautiful",
-  "historyporn",
-  "humansbeingbros",
-  "interestingasfuck",
-  "isthisai",
-  "jeffrosenstock",
-  "law",
-  "mademesmile",
-  "millennials",
-  "moodcamera",
-  "mothershiprpg",
-  "moviedetails",
-  "murderedbywords",
-  "n64",
-  "nasa",
-  "newgirl",
-  "natureisfuckinglit",
-  "obscuremusicthatslaps",
-  "oceansarefuckinglit",
-  "oddlysatisfying",
-  "oldschoolcool",
-  "outoftheloop",
-  "sanfrancisco",
-  "severanceappletvplus",
-  "streetphotography",
-  "thatsinsane",
-  "thedepthsbelow",
-  "theydidthemath",
-  "todayilearned",
-  "tvdetails",
-  "twinpeaks",
-  "underratedmovies",
-  "woahdude",
-  "worldnews",
+  "gamedev",
   "design",
 ];
 
@@ -591,19 +549,11 @@ function savePrefs() {
 // FETCH REDDIT DATA
 // ═══════════════════════════════════════════
 
-// Your own Cloudflare Worker proxy — no more flaky public CORS proxies
+// Your own Cloudflare Worker proxy
 const PROXY_BASE = 'https://reddit-proxy.steven-413.workers.dev';
+const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
-async function fetchSubreddit(sub, timeRange) {
-  const path = timeRange === 'hot'
-    ? `/r/${sub}/hot.json?limit=5&raw_json=1`
-    : `/r/${sub}/top.json?t=${timeRange}&limit=5&raw_json=1`;
-
-  const resp = await fetch(PROXY_BASE + path);
-
-  if (!resp.ok) throw new Error(`Failed to fetch r/${sub}: ${resp.status}`);
-  const data = await resp.json();
-
+function parsePosts(data) {
   return (data.data?.children || []).map(child => {
     const d = child.data;
     return {
@@ -628,7 +578,38 @@ async function fetchSubreddit(sub, timeRange) {
   });
 }
 
-async function fetchAllPosts() {
+async function fetchMultiSub(subs, timeRange) {
+  // Reddit supports /r/sub1+sub2+sub3/top.json — combine up to ~10 per request
+  const combined = subs.join('+');
+  const path = timeRange === 'hot'
+    ? `/r/${combined}/hot.json?limit=${subs.length * 5}&raw_json=1`
+    : `/r/${combined}/top.json?t=${timeRange}&limit=${subs.length * 5}&raw_json=1`;
+
+  const resp = await fetch(PROXY_BASE + path);
+  if (!resp.ok) throw new Error(`Batch fetch failed: ${resp.status}`);
+  const data = await resp.json();
+  return parsePosts(data);
+}
+
+async function fetchAllPosts(forceRefresh = false) {
+  // Check cache first
+  if (!forceRefresh) {
+    const cached = localStorage.getItem('briefing_cache');
+    const cachedTime = localStorage.getItem('briefing_cache_time');
+    const cachedSubs = localStorage.getItem('briefing_cache_subs');
+    const cachedRange = localStorage.getItem('briefing_cache_range');
+    if (cached && cachedTime &&
+        Date.now() - parseInt(cachedTime) < CACHE_TTL &&
+        cachedSubs === JSON.stringify(state.subreddits) &&
+        cachedRange === state.timeRange) {
+      state.posts = JSON.parse(cached);
+      state.loading = false;
+      state.lastFetch = new Date(parseInt(cachedTime)).toISOString();
+      render();
+      return;
+    }
+  }
+
   state.loading = true;
   state.error = null;
   state.posts = [];
@@ -636,24 +617,27 @@ async function fetchAllPosts() {
   render();
 
   try {
-    // Fetch with stagger to avoid rate limiting
-    const results = [];
-    for (let i = 0; i < state.subreddits.length; i++) {
-      try {
-        state.loadingSub = state.subreddits[i];
-        state.loadingProgress = `${i + 1}/${state.subreddits.length}`;
-        render();
-        const posts = await fetchSubreddit(state.subreddits[i], state.timeRange);
-        results.push(...posts);
-        // Delay between requests — longer with many subs
-        if (i < state.subreddits.length - 1) {
-          await new Promise(r => setTimeout(r, 400));
-        }
-      } catch (e) {
-        console.warn(`Skipping r/${state.subreddits[i]}:`, e.message);
-      }
+    // Batch subs into groups of 10 for multi-sub requests
+    const BATCH_SIZE = 10;
+    const batches = [];
+    for (let i = 0; i < state.subreddits.length; i += BATCH_SIZE) {
+      batches.push(state.subreddits.slice(i, i + BATCH_SIZE));
     }
-    state.loadingSub = null;
+
+    // Fetch batches in parallel (2-3 at a time)
+    const PARALLEL = 3;
+    const results = [];
+    for (let i = 0; i < batches.length; i += PARALLEL) {
+      const chunk = batches.slice(i, i + PARALLEL);
+      state.loadingProgress = `${Math.min((i + PARALLEL) * BATCH_SIZE, state.subreddits.length)}/${state.subreddits.length} subs`;
+      render();
+      const chunkResults = await Promise.allSettled(
+        chunk.map(batch => fetchMultiSub(batch, state.timeRange))
+      );
+      chunkResults.forEach(r => {
+        if (r.status === 'fulfilled') results.push(...r.value);
+      });
+    }
     state.loadingProgress = null;
 
     // Deduplicate by id
@@ -664,7 +648,12 @@ async function fetchAllPosts() {
       return true;
     });
 
+    // Cache the results
     state.lastFetch = new Date().toISOString();
+    localStorage.setItem('briefing_cache', JSON.stringify(state.posts));
+    localStorage.setItem('briefing_cache_time', Date.now().toString());
+    localStorage.setItem('briefing_cache_subs', JSON.stringify(state.subreddits));
+    localStorage.setItem('briefing_cache_range', state.timeRange);
     localStorage.setItem('briefing_lastfetch', state.lastFetch);
 
   } catch (e) {
@@ -700,10 +689,13 @@ function escapeHtml(str) {
 function getSortedPosts() {
   const MAX_PER_SUB = 2;
 
+  // Filter out already-read posts first
+  const unread = state.posts.filter(p => !state.readPosts.has(p.id));
+
   // If sorting by 'new', skip normalization — just enforce the sub cap
   if (state.sortBy === 'new') {
     const subCount = {};
-    return [...state.posts]
+    return [...unread]
       .sort((a, b) => b.created - a.created)
       .filter(p => {
         subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
@@ -712,7 +704,7 @@ function getSortedPosts() {
       .slice(0, state.digestSize);
   }
 
-  // Calculate per-subreddit average score for normalization
+  // Calculate per-subreddit average score for normalization (using ALL posts, not just unread)
   const subScores = {};
   state.posts.forEach(p => {
     if (!subScores[p.subreddit]) subScores[p.subreddit] = { total: 0, count: 0 };
@@ -726,11 +718,8 @@ function getSortedPosts() {
   }
 
   // Normalized score = how many multiples of the sub's average this post is
-  // Then blend with raw score so truly massive posts still rank high
-  const scored = state.posts.map(p => {
+  const scored = unread.map(p => {
     const avg = subAvg[p.subreddit] || 1;
-    const normalized = p.score / Math.max(avg, 1);
-    // Blend: 70% normalized, 30% log-scaled raw score
     const rawFactor = Math.log10(Math.max(p.score, 1)) / 5;
     const field = state.sortBy === 'comments' ? p.comments : p.score;
     const fieldAvg = state.sortBy === 'comments'
@@ -743,7 +732,6 @@ function getSortedPosts() {
     return { ...p, _blended: blended };
   });
 
-  // Sort by blended score, then enforce per-sub cap
   scored.sort((a, b) => b._blended - a._blended);
 
   const subCount = {};
@@ -781,7 +769,7 @@ function resetDigest() {
   state.readPosts.clear();
   state.isComplete = false;
   saveRead();
-  fetchAllPosts();
+  fetchAllPosts(true);
 }
 
 function addSubreddit(name) {
@@ -827,10 +815,17 @@ function toggleSettings() {
 // ═══════════════════════════════════════════
 function render() {
   const posts = getSortedPosts();
-  const readCount = posts.filter(p => state.readPosts.has(p.id)).length;
-  const pct = posts.length > 0 ? (readCount / posts.length) * 100 : 0;
   const now = new Date();
   const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+  // Show when data was last fetched
+  let fetchInfo = '';
+  if (state.lastFetch) {
+    const ago = Date.now() - new Date(state.lastFetch).getTime();
+    if (ago < 60000) fetchInfo = 'just now';
+    else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
+    else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
+  }
 
   let html = `
     <header>
@@ -838,11 +833,11 @@ function render() {
         <div class="header-top">
           <div>
             <div class="logo">briefing</div>
-            <div class="header-meta">${dateStr} · ${posts.length} posts · ${readCount} read</div>
+            <div class="header-meta">${dateStr} · ${posts.length} new${fetchInfo ? ' · updated ' + fetchInfo : ''}</div>
           </div>
           <div class="header-actions">
             <button class="btn-small" onclick="markAllRead()">mark all read</button>
-            <button class="btn-small" onclick="resetDigest()">refresh</button>
+            <button class="btn-small" onclick="fetchAllPosts(true)">refresh</button>
             <button class="btn-icon" onclick="toggleSettings()">
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/>
@@ -850,9 +845,6 @@ function render() {
               </svg>
             </button>
           </div>
-        </div>
-        <div class="progress-track">
-          <div class="progress-fill" style="width: ${pct}%"></div>
         </div>
 
         <div class="settings ${state.settingsOpen ? 'open' : ''}">
@@ -900,7 +892,7 @@ function render() {
   if (state.loading) {
     html += `<div class="loading-state">
       <div class="spinner"></div>
-      <span class="loading-text">fetching your digest…${state.loadingSub ? ` r/${state.loadingSub} (${state.loadingProgress})` : ''}</span>
+      <span class="loading-text">fetching your digest…${state.loadingProgress ? ` (${state.loadingProgress})` : ''}</span>
     </div>`;
     document.getElementById('app').innerHTML = html;
     return;
@@ -911,27 +903,21 @@ function render() {
     html += `<div class="error-banner">${escapeHtml(state.error)}</div>`;
   }
 
-  // Empty state
+  // Empty state — either no posts fetched, or all caught up
   if (!state.loading && posts.length === 0 && !state.error) {
-    html += `<div class="empty-state">
-      <h3>No posts yet</h3>
-      <p>Hit "refresh" to fetch today's digest from your subreddits, or add more subreddits in settings.</p>
-    </div>`;
-    document.getElementById('app').innerHTML = html;
-    return;
-  }
-
-  // Completion screen
-  if (state.isComplete) {
-    html += `<div class="completion">
+    const hasPosts = state.posts.length > 0;
+    html += hasPosts ? `<div class="completion">
       <div class="completion-icon">
         <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round">
           <path d="M20 6L9 17l-5-5"/>
         </svg>
       </div>
       <h2>You're all caught up.</h2>
-      <p>${posts.length} posts from ${state.subreddits.length} subreddits, read and done. Go enjoy your day.</p>
-      <button onclick="resetDigest()">refresh digest</button>
+      <p>Nothing new from your ${state.subreddits.length} subreddits. Check back later.</p>
+      <button onclick="fetchAllPosts(true)">check now</button>
+    </div>` : `<div class="empty-state">
+      <h3>No posts yet</h3>
+      <p>Hit "refresh" to fetch posts from your subreddits, or add more in settings.</p>
     </div>`;
     document.getElementById('app').innerHTML = html;
     return;
@@ -939,11 +925,10 @@ function render() {
 
   // Post cards
   posts.forEach((post, i) => {
-    const isRead = state.readPosts.has(post.id);
     const c = getSubColor(post.subreddit);
 
     html += `
-    <div class="post-card ${isRead ? 'read' : ''}" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
+    <div class="post-card" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
       <div class="post-layout">
         <div class="post-score">
           <div class="arrow" style="color:${c}"></div>
@@ -966,7 +951,6 @@ function render() {
               ${post.comments} comments
             </a>
             ${!post.is_self ? `<a class="post-link" href="${escapeHtml(post.url)}" target="_blank" rel="noopener">${escapeHtml(post.domain)}</a>` : ''}
-            ${!isRead ? `<button class="mark-read-btn" onclick="event.stopPropagation();markRead('${post.id}')">mark read</button>` : ''}
           </div>
         </div>
       </div>
@@ -988,49 +972,53 @@ function attachScrollObserver() {
   // Disconnect previous observer
   if (scrollObserver) scrollObserver.disconnect();
 
-  // rootMargin: trigger when the post's bottom edge is 50px above the top of the viewport
   scrollObserver = new IntersectionObserver((entries) => {
+    let changed = false;
     entries.forEach(entry => {
       const id = entry.target.dataset.postId;
       if (!id) return;
-      // When the post leaves the viewport going UP (not visible, and above viewport)
+      // When the post leaves the viewport going UP
       if (!entry.isIntersecting && entry.boundingClientRect.bottom < 100) {
         if (!state.readPosts.has(id)) {
           state.readPosts.add(id);
-          saveRead();
-          entry.target.classList.add('read');
-          checkCompletion();
-          // Update the header read count without full re-render
-          updateReadCount();
+          changed = true;
         }
       }
     });
+    if (changed) {
+      saveRead();
+      // Update header count without full re-render
+      const posts = getSortedPosts();
+      const meta = document.querySelector('.header-meta');
+      if (meta) {
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        let fetchInfo = '';
+        if (state.lastFetch) {
+          const ago = Date.now() - new Date(state.lastFetch).getTime();
+          if (ago < 60000) fetchInfo = 'just now';
+          else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
+          else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
+        }
+        meta.textContent = `${dateStr} · ${posts.length} new${fetchInfo ? ' · updated ' + fetchInfo : ''}`;
+      }
+      // If all posts read, re-render to show caught up screen
+      if (posts.length === 0 && state.posts.length > 0) {
+        render();
+      }
+    }
   }, {
     threshold: 0,
     rootMargin: '0px 0px 0px 0px'
   });
 
-  // Observe all unread post cards
-  document.querySelectorAll('.post-card:not(.read)').forEach(el => {
+  // Observe all post cards
+  document.querySelectorAll('.post-card').forEach(el => {
     scrollObserver.observe(el);
   });
 }
 
-function updateReadCount() {
-  const posts = getSortedPosts();
-  const readCount = posts.filter(p => state.readPosts.has(p.id)).length;
-  const pct = posts.length > 0 ? (readCount / posts.length) * 100 : 0;
-  // Update progress bar
-  const fill = document.querySelector('.progress-fill');
-  if (fill) fill.style.width = pct + '%';
-  // Update meta text
-  const meta = document.querySelector('.header-meta');
-  if (meta) {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    meta.textContent = `${dateStr} · ${posts.length} posts · ${readCount} read`;
-  }
-}
+// updateReadCount no longer needed — handled inline above
 
 // ═══════════════════════════════════════════
 // INIT
