@@ -634,7 +634,7 @@ async function fetchMultiSub(subs, timeRange) {
 }
 
 async function fetchAllPosts(forceRefresh = false) {
-  // Check cache first
+  // Check cache first — render from cache immediately
   if (!forceRefresh) {
     const cached = localStorage.getItem('briefing_cache');
     const cachedTime = localStorage.getItem('briefing_cache_time');
@@ -652,27 +652,27 @@ async function fetchAllPosts(forceRefresh = false) {
     }
   }
 
+  // Remember what post IDs we had before
+  const previousIds = new Set(state.posts.map(p => p.id));
+
   state.loading = true;
   state.error = null;
-  state.posts = [];
-  state.isComplete = false;
-  render();
+  // Don't clear posts — keep showing current list while loading
+  if (state.posts.length === 0) render(); // only render loading screen if we have nothing
 
   try {
-    // Batch subs into groups of 10 for multi-sub requests
     const BATCH_SIZE = 10;
     const batches = [];
     for (let i = 0; i < state.subreddits.length; i += BATCH_SIZE) {
       batches.push(state.subreddits.slice(i, i + BATCH_SIZE));
     }
 
-    // Fetch batches in parallel (2-3 at a time)
     const PARALLEL = 3;
     const results = [];
     for (let i = 0; i < batches.length; i += PARALLEL) {
       const chunk = batches.slice(i, i + PARALLEL);
       state.loadingProgress = `${Math.min((i + PARALLEL) * BATCH_SIZE, state.subreddits.length)}/${state.subreddits.length} subs`;
-      render();
+      if (state.posts.length === 0) render();
       const chunkResults = await Promise.allSettled(
         chunk.map(batch => fetchMultiSub(batch, state.timeRange))
       );
@@ -682,15 +682,16 @@ async function fetchAllPosts(forceRefresh = false) {
     }
     state.loadingProgress = null;
 
-    // Deduplicate by id
+    // Deduplicate
     const seen = new Set();
-    state.posts = results.filter(p => {
+    const newPosts = results.filter(p => {
       if (seen.has(p.id)) return false;
       seen.add(p.id);
       return true;
     });
 
-    // Cache the results
+    // Cache
+    state.posts = newPosts;
     state.lastFetch = new Date().toISOString();
     localStorage.setItem('briefing_cache', JSON.stringify(state.posts));
     localStorage.setItem('briefing_cache_time', Date.now().toString());
@@ -793,8 +794,11 @@ function getSortedPosts() {
 function markRead(id) {
   state.readPosts.add(id);
   saveRead();
-  checkCompletion();
-  render();
+  // Just fade the post in-place — no re-render
+  const el = document.querySelector(`.post-card[data-post-id="${id}"]`);
+  if (el) el.classList.add('read');
+  // Update header count
+  updateHeaderCount();
 }
 
 function markAllRead() {
@@ -1033,7 +1037,6 @@ function attachScrollObserver() {
     entries.forEach(entry => {
       const id = entry.target.dataset.postId;
       if (!id) return;
-      // When the post leaves the viewport going UP
       if (!entry.isIntersecting && entry.boundingClientRect.bottom < 100) {
         if (!state.readPosts.has(id)) {
           state.readPosts.add(id);
@@ -1044,31 +1047,33 @@ function attachScrollObserver() {
     });
     if (changed) {
       saveRead();
-      // Update header unread count without full re-render
-      const unread = getSortedPosts().filter(p => !state.readPosts.has(p.id)).length;
-      const meta = document.querySelector('.header-meta');
-      if (meta) {
-        const now = new Date();
-        const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-        let fetchInfo = '';
-        if (state.lastFetch) {
-          const ago = Date.now() - new Date(state.lastFetch).getTime();
-          if (ago < 60000) fetchInfo = 'just now';
-          else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
-          else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
-        }
-        meta.textContent = `${dateStr} · ${unread} new${fetchInfo ? ' · updated ' + fetchInfo : ''}`;
-      }
+      updateHeaderCount();
     }
   }, {
     threshold: 0,
     rootMargin: '0px 0px 0px 0px'
   });
 
-  // Observe all unread post cards
   document.querySelectorAll('.post-card:not(.read)').forEach(el => {
     scrollObserver.observe(el);
   });
+}
+
+function updateHeaderCount() {
+  const unread = state.posts.filter(p => !state.readPosts.has(p.id)).length;
+  const meta = document.querySelector('.header-meta');
+  if (meta) {
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+    let fetchInfo = '';
+    if (state.lastFetch) {
+      const ago = Date.now() - new Date(state.lastFetch).getTime();
+      if (ago < 60000) fetchInfo = 'just now';
+      else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
+      else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
+    }
+    meta.textContent = `${dateStr} · ${unread} new${fetchInfo ? ' · updated ' + fetchInfo : ''}`;
+  }
 }
 
 // ═══════════════════════════════════════════
