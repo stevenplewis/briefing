@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#0a0c10">
-<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>briefing — your daily reddit digest</title>
 <script
@@ -74,11 +74,11 @@
   /* Solid fill behind iOS status bar so content doesn't peek through */
   header::before {
     content: '';
-    position: fixed;
-    top: 0;
+    position: absolute;
+    top: -10rem;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top);
+    height: 10rem;
     background: var(--bg);
     z-index: 101;
   }
