@@ -11,8 +11,6 @@
   window.sentryOnLoad = function () {
     Sentry.init({
       tracesSampleRate: 1.0,
-      replaysSessionSampleRate: 0.1,
-      replaysOnErrorSampleRate: 1.0,
     });
   };
 </script>
@@ -86,9 +84,10 @@
     top: 0;
     left: 0;
     right: 0;
-    height: env(safe-area-inset-top, 0px);
+    height: 60px;
     background: var(--bg);
     z-index: 200;
+    pointer-events: none;
   }
 
   .header-inner { padding: 18px 0 14px; }
