@@ -62,13 +62,25 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(10, 12, 16, 0.82);
+    background: var(--bg);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
     border-bottom: 1px solid var(--border);
     margin: 0 -20px;
     padding: 0 20px;
     padding-top: env(safe-area-inset-top);
+  }
+
+  /* Solid fill behind iOS status bar so content doesn't peek through */
+  header::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: env(safe-area-inset-top);
+    background: var(--bg);
+    z-index: 101;
   }
 
   .header-inner { padding: 18px 0 14px; }
