@@ -2,8 +2,15 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0a0c10">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>briefing — your daily reddit digest</title>
+<script
+  src="https://js.sentry-cdn.com/19ba8e5c6dd9277086223e3bb1818223.min.js"
+  crossorigin="anonymous"
+></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Quintessential&display=swap" rel="stylesheet">
 <style>
@@ -23,6 +30,10 @@
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
 
+  html {
+    background: var(--bg);
+  }
+
   body {
     background: var(--bg);
     color: var(--text-primary);
@@ -30,6 +41,7 @@
     line-height: 1.5;
     min-height: 100vh;
     -webkit-font-smoothing: antialiased;
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   /* Subtle grain overlay */
@@ -56,6 +68,7 @@
     border-bottom: 1px solid var(--border);
     margin: 0 -20px;
     padding: 0 20px;
+    padding-top: env(safe-area-inset-top);
   }
 
   .header-inner { padding: 18px 0 14px; }
@@ -495,6 +508,24 @@
 
 <script>
 // ═══════════════════════════════════════════
+// SENTRY
+// ═══════════════════════════════════════════
+if (window.Sentry) {
+  Sentry.init({
+    tracesSampleRate: 1.0,
+    replaysSessionSampleRate: 0.1,
+    replaysOnErrorSampleRate: 1.0,
+  });
+}
+
+// Helper to add Sentry breadcrumbs
+function track(category, message, data = {}) {
+  if (window.Sentry) {
+    Sentry.addBreadcrumb({ category, message, data, level: 'info' });
+  }
+}
+
+// ═══════════════════════════════════════════
 // CONFIG — Edit your subreddits here!
 // ═══════════════════════════════════════════
 const DEFAULT_SUBS = [
@@ -647,18 +678,18 @@ async function fetchAllPosts(forceRefresh = false) {
       state.posts = JSON.parse(cached);
       state.loading = false;
       state.lastFetch = new Date(parseInt(cachedTime)).toISOString();
+      track('fetch', 'cache_hit', { age: Math.round((Date.now() - parseInt(cachedTime)) / 1000) + 's', posts: state.posts.length });
       render();
       return;
     }
   }
 
-  // Remember what post IDs we had before
+  const fetchStart = Date.now();
   const previousIds = new Set(state.posts.map(p => p.id));
 
   state.loading = true;
   state.error = null;
-  // Don't clear posts — keep showing current list while loading
-  if (state.posts.length === 0) render(); // only render loading screen if we have nothing
+  if (state.posts.length === 0) render();
 
   try {
     const BATCH_SIZE = 10;
@@ -682,7 +713,6 @@ async function fetchAllPosts(forceRefresh = false) {
     }
     state.loadingProgress = null;
 
-    // Deduplicate
     const seen = new Set();
     const newPosts = results.filter(p => {
       if (seen.has(p.id)) return false;
@@ -690,7 +720,9 @@ async function fetchAllPosts(forceRefresh = false) {
       return true;
     });
 
-    // Cache
+    const genuinelyNew = newPosts.filter(p => !previousIds.has(p.id)).length;
+    const fetchDuration = Date.now() - fetchStart;
+
     state.posts = newPosts;
     state.lastFetch = new Date().toISOString();
     localStorage.setItem('briefing_cache', JSON.stringify(state.posts));
@@ -699,8 +731,18 @@ async function fetchAllPosts(forceRefresh = false) {
     localStorage.setItem('briefing_cache_range', state.timeRange);
     localStorage.setItem('briefing_lastfetch', state.lastFetch);
 
+    track('fetch', 'fetch_complete', {
+      duration: fetchDuration + 'ms',
+      totalPosts: newPosts.length,
+      newPosts: genuinelyNew,
+      subs: state.subreddits.length,
+      forced: forceRefresh,
+    });
+
   } catch (e) {
     state.error = e.message;
+    track('fetch', 'fetch_error', { error: e.message });
+    if (window.Sentry) Sentry.captureException(e);
   }
 
   state.loading = false;
@@ -770,7 +812,14 @@ function getSortedPosts() {
           : 1)
       : avg;
     const fieldNorm = field / Math.max(fieldAvg, 1);
-    const blended = fieldNorm * 0.7 + rawFactor * 0.3;
+
+    // Time decay: boost newer posts, penalize older ones
+    // A post 1hr old gets ~1.0, 6hrs gets ~0.6, 12hrs gets ~0.45, 24hrs gets ~0.35
+    const hoursOld = Math.max((Date.now() / 1000 - p.created) / 3600, 0.5);
+    const timeFactor = 1 / Math.pow(hoursOld, 0.4);
+
+    // Blend: 50% normalized score, 20% raw magnitude, 30% time freshness
+    const blended = fieldNorm * 0.5 + rawFactor * 0.2 + timeFactor * 3 * 0.3;
     return { ...p, _blended: blended };
   });
 
@@ -789,7 +838,7 @@ function getSortedPosts() {
 function markRead(id) {
   state.readPosts.add(id);
   saveRead();
-  // Just fade the post in-place — no re-render
+  track('engagement', 'post_clicked', { postId: id });
   const el = document.querySelector(`.post-card[data-post-id="${id}"]`);
   if (el) el.classList.add('read');
   // Update header count
@@ -797,9 +846,10 @@ function markRead(id) {
 }
 
 function markAllRead() {
-  // Mark every fetched post as read, not just the visible ones
+  const count = state.posts.length;
   state.posts.forEach(p => state.readPosts.add(p.id));
   saveRead();
+  track('engagement', 'mark_all_read', { postCount: count });
   render();
 }
 
