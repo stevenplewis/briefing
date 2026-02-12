@@ -7,9 +7,19 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>briefing — your daily reddit digest</title>
+<script>
+  window.sentryOnLoad = function () {
+    Sentry.init({
+      tracesSampleRate: 1.0,
+      replaysSessionSampleRate: 0.1,
+      replaysOnErrorSampleRate: 1.0,
+    });
+  };
+</script>
 <script
   src="https://js.sentry-cdn.com/19ba8e5c6dd9277086223e3bb1818223.min.js"
   crossorigin="anonymous"
+  data-lazy="no"
 ></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600&family=Quintessential&display=swap" rel="stylesheet">
@@ -71,16 +81,14 @@
     padding-top: env(safe-area-inset-top);
   }
 
-  /* Solid fill behind iOS status bar so content doesn't peek through */
-  header::before {
-    content: '';
-    position: absolute;
-    top: -10rem;
+  .top-cover {
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
-    height: 10rem;
+    height: env(safe-area-inset-top, 0px);
     background: var(--bg);
-    z-index: 101;
+    z-index: 200;
   }
 
   .header-inner { padding: 18px 0 14px; }
@@ -516,19 +524,13 @@
 </style>
 </head>
 <body>
+<div class="top-cover"></div>
 <div class="app" id="app"></div>
 
 <script>
 // ═══════════════════════════════════════════
-// SENTRY
+// SENTRY — initialized via loader script in <head>
 // ═══════════════════════════════════════════
-if (window.Sentry) {
-  Sentry.init({
-    tracesSampleRate: 1.0,
-    replaysSessionSampleRate: 0.1,
-    replaysOnErrorSampleRate: 1.0,
-  });
-}
 
 // Helper to add Sentry breadcrumbs
 function track(category, message, data = {}) {
