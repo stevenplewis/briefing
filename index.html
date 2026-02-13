@@ -114,11 +114,24 @@
   .subreddit-input:focus { background: var(--surface); }
   .subreddit-input::placeholder { color: var(--text-muted); }
 
-  .sub-tags { display: flex; gap: 4px; flex-wrap: wrap; padding: 8px 0 4px; }
+  .sub-tags { display: flex; flex-direction: column; gap: 10px; padding: 8px 0 4px; }
+  .tier-group { display: flex; flex-direction: column; gap: 4px; }
+  .tier-label {
+    font-size: 8px; text-transform: uppercase; letter-spacing: 0.15em;
+    color: var(--text-muted); font-weight: 700; padding-bottom: 2px;
+    border-bottom: 1px solid var(--surface);
+  }
+  .tier-subs { display: flex; gap: 4px; flex-wrap: wrap; }
   .sub-tag {
     font-family: 'Space Mono', monospace; font-size: 8px; padding: 2px 5px;
     border: 1.5px solid; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+    display: inline-flex; align-items: center; gap: 2px;
   }
+  .tier-indicator {
+    cursor: pointer; opacity: 0.5; font-size: 7px;
+    padding-right: 2px; transition: opacity 0.1s;
+  }
+  .tier-indicator:hover { opacity: 1; }
   .sub-tag .remove-sub { margin-left: 3px; cursor: pointer; opacity: 0.5; }
   .sub-tag .remove-sub:hover { opacity: 1; }
 
@@ -217,60 +230,74 @@ function track(category, message, data = {}) {
 }
 
 // ═══════════════════════════════════════════
-// CONFIG — Edit your subreddits here!
+// CONFIG — Edit your subreddits and tiers here!
+// Tiers: "primary" (2x boost, 2 posts), "regular" (normal, 2 posts), "sprinkle" (0.3x, 1 post)
 // ═══════════════════════════════════════════
-const DEFAULT_SUBS = [
-  "webdev",
-  "science",
-  "space",
-  "technology",
-  "90s",
-  "accidentalrenaissance",
-  "analog",
-  "animalsbeingbros",
-  "animalsbeingderps",
-  "anticonsumption",
-  "apple",
-  "bayarea",
-  "boardgames",
-  "coolguides",
-  "damnthatsinteresting",
-  "dataisbeautiful",
-  "historyporn",
-  "humansbeingbros",
-  "interestingasfuck",
-  "isthisai",
-  "jeffrosenstock",
-  "law",
-  "mademesmile",
-  "millennials",
-  "moodcamera",
-  "mothershiprpg",
-  "moviedetails",
-  "murderedbywords",
-  "n64",
-  "nasa",
-  "newgirl",
-  "natureisfuckinglit",
-  "obscuremusicthatslaps",
-  "oceansarefuckinglit",
-  "oddlysatisfying",
-  "oldschoolcool",
-  "outoftheloop",
-  "sanfrancisco",
-  "severanceappletvplus",
-  "streetphotography",
-  "thatsinsane",
-  "thedepthsbelow",
-  "theydidthemath",
-  "todayilearned",
-  "tvdetails",
-  "twinpeaks",
-  "underratedmovies",
-  "woahdude",
-  "worldnews",
-  "design",
-];
+const DEFAULT_TIERS = {
+  // PRIMARY — your main interests, always surface
+  "science":                "primary",
+  "space":                  "primary",
+  "technology":             "primary",
+  "damnthatsinteresting":   "primary",
+  "dataisbeautiful":        "primary",
+  "interestingasfuck":      "primary",
+  "todayilearned":          "primary",
+  "worldnews":              "primary",
+  "outoftheloop":           "primary",
+  "nasa":                   "primary",
+  "apple":                  "primary",
+  "bayarea":                "primary",
+  "sanfrancisco":           "primary",
+  "law":                    "primary",
+  "theydidthemath":         "primary",
+
+  // REGULAR — solid subs, normal weight
+  "webdev":                 "regular",
+  "historyporn":            "regular",
+  "coolguides":             "regular",
+  "murderedbywords":        "regular",
+  "oldschoolcool":          "regular",
+  "streetphotography":      "regular",
+  "accidentalrenaissance":  "regular",
+  "anticonsumption":        "regular",
+  "millennials":            "regular",
+  "twinpeaks":              "regular",
+  "severanceappletvplus":   "regular",
+  "moviedetails":           "regular",
+  "tvdetails":              "regular",
+  "natureisfuckinglit":     "regular",
+  "oceansarefuckinglit":    "regular",
+  "thatsinsane":            "regular",
+  "woahdude":               "regular",
+  "design":                 "regular",
+  "isthisai":               "regular",
+
+  // SPRINKLE — nice to see occasionally, don't dominate
+  "90s":                    "sprinkle",
+  "analog":                 "sprinkle",
+  "animalsbeingbros":       "sprinkle",
+  "animalsbeingderps":      "sprinkle",
+  "boardgames":             "sprinkle",
+  "humansbeingbros":        "sprinkle",
+  "mademesmile":            "sprinkle",
+  "oddlysatisfying":        "sprinkle",
+  "underratedmovies":       "sprinkle",
+  "thedepthsbelow":         "sprinkle",
+  "moodcamera":             "sprinkle",
+  "n64":                    "sprinkle",
+  "newgirl":                "sprinkle",
+  "jeffrosenstock":         "sprinkle",
+  "mothershiprpg":          "sprinkle",
+  "obscuremusicthatslaps":  "sprinkle",
+};
+
+const DEFAULT_SUBS = Object.keys(DEFAULT_TIERS);
+const TIER_CONFIG = {
+  primary:  { boost: 2.0, maxPosts: 2, label: '+++', order: 0 },
+  regular:  { boost: 1.0, maxPosts: 2, label: '==',  order: 1 },
+  sprinkle: { boost: 0.3, maxPosts: 1, label: '~',   order: 2 },
+};
+const TIER_CYCLE = ['primary', 'regular', 'sprinkle'];
 
 const SUB_COLORS = [
   "#007575", "#936119", "#c0304a", "#26754f",
@@ -289,6 +316,7 @@ function getSubColor(sub) {
 // ═══════════════════════════════════════════
 let state = {
   subreddits: JSON.parse(localStorage.getItem('briefing_subs') || 'null') || [...DEFAULT_SUBS],
+  tiers: JSON.parse(localStorage.getItem('briefing_tiers') || 'null') || {...DEFAULT_TIERS},
   posts: [],
   readPosts: new Set(JSON.parse(localStorage.getItem('briefing_read') || '[]')),
   loading: false,
@@ -301,7 +329,13 @@ let state = {
   lastFetch: localStorage.getItem('briefing_lastfetch') || null,
 };
 
+// Ensure any new subs get a default tier
+state.subreddits.forEach(s => { if (!state.tiers[s]) state.tiers[s] = 'regular'; });
+
+function getSubTier(sub) { return state.tiers[sub] || 'regular'; }
+
 function saveSubs() { localStorage.setItem('briefing_subs', JSON.stringify(state.subreddits)); }
+function saveTiers() { localStorage.setItem('briefing_tiers', JSON.stringify(state.tiers)); }
 function saveRead() { localStorage.setItem('briefing_read', JSON.stringify([...state.readPosts])); }
 function savePrefs() {
   localStorage.setItem('briefing_sort', state.sortBy);
@@ -463,24 +497,24 @@ function escapeHtml(str) {
 }
 
 function getSortedPosts() {
-  const MAX_PER_SUB = 2;
-
   // Only show unread posts
   const unread = state.posts.filter(p => !state.readPosts.has(p.id));
 
-  // If sorting by 'new', skip normalization — just enforce the sub cap
+  // If sorting by 'new', skip normalization — just enforce per-tier caps
   if (state.sortBy === 'new') {
     const subCount = {};
     return [...unread]
       .sort((a, b) => b.created - a.created)
       .filter(p => {
+        const tier = getSubTier(p.subreddit);
+        const max = TIER_CONFIG[tier]?.maxPosts || 2;
         subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
-        return subCount[p.subreddit] <= MAX_PER_SUB;
+        return subCount[p.subreddit] <= max;
       })
       .slice(0, state.digestSize);
   }
 
-  // Calculate per-subreddit average score for normalization (using ALL posts for accurate averages)
+  // Calculate per-subreddit average score for normalization
   const subScores = {};
   state.posts.forEach(p => {
     if (!subScores[p.subreddit]) subScores[p.subreddit] = { total: 0, count: 0 };
@@ -504,22 +538,29 @@ function getSortedPosts() {
       : avg;
     const fieldNorm = field / Math.max(fieldAvg, 1);
 
-    // Time decay: boost newer posts, penalize older ones
-    // A post 1hr old gets ~1.0, 6hrs gets ~0.6, 12hrs gets ~0.45, 24hrs gets ~0.35
+    // Time decay
     const hoursOld = Math.max((Date.now() / 1000 - p.created) / 3600, 0.5);
     const timeFactor = 1 / Math.pow(hoursOld, 0.4);
 
-    // Blend: 50% normalized score, 20% raw magnitude, 30% time freshness
-    const blended = fieldNorm * 0.5 + rawFactor * 0.2 + timeFactor * 3 * 0.3;
-    return { ...p, _blended: blended };
+    // Base blend: 50% normalized score, 20% raw magnitude, 30% time freshness
+    const baseBlend = fieldNorm * 0.5 + rawFactor * 0.2 + timeFactor * 3 * 0.3;
+
+    // Apply tier boost
+    const tier = getSubTier(p.subreddit);
+    const boost = TIER_CONFIG[tier]?.boost || 1.0;
+    const blended = baseBlend * boost;
+
+    return { ...p, _blended: blended, _tier: tier };
   });
 
   scored.sort((a, b) => b._blended - a._blended);
 
+  // Enforce per-sub cap based on tier
   const subCount = {};
   return scored.filter(p => {
+    const max = TIER_CONFIG[p._tier]?.maxPosts || 2;
     subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
-    return subCount[p.subreddit] <= MAX_PER_SUB;
+    return subCount[p.subreddit] <= max;
   }).slice(0, state.digestSize);
 }
 
@@ -562,14 +603,26 @@ function addSubreddit(name) {
   const clean = name.trim().toLowerCase().replace(/^r\//, '');
   if (clean && !state.subreddits.includes(clean)) {
     state.subreddits.push(clean);
+    state.tiers[clean] = 'regular';
     saveSubs();
+    saveTiers();
     render();
   }
 }
 
 function removeSubreddit(name) {
   state.subreddits = state.subreddits.filter(s => s !== name);
+  delete state.tiers[name];
   saveSubs();
+  saveTiers();
+  render();
+}
+
+function cycleTier(name) {
+  const current = getSubTier(name);
+  const idx = TIER_CYCLE.indexOf(current);
+  state.tiers[name] = TIER_CYCLE[(idx + 1) % TIER_CYCLE.length];
+  saveTiers();
   render();
 }
 
@@ -663,11 +716,22 @@ function render() {
               </div>
             </div>
             <div class="sub-tags">
-              ${state.subreddits.map(sub => {
-                const c = getSubColor(sub);
-                return `<span class="sub-tag" style="background:${c}15;color:${c}">
-                  r/${escapeHtml(sub)}<span class="remove-sub" onclick="removeSubreddit('${escapeHtml(sub)}')">&times;</span>
-                </span>`;
+              ${TIER_CYCLE.map(tier => {
+                const cfg = TIER_CONFIG[tier];
+                const subsInTier = state.subreddits.filter(s => getSubTier(s) === tier);
+                if (subsInTier.length === 0) return '';
+                return `<div class="tier-group">
+                  <span class="tier-label">${tier}</span>
+                  <div class="tier-subs">
+                    ${subsInTier.map(sub => {
+                      const c = getSubColor(sub);
+                      return `<span class="sub-tag" style="color:${c};border-color:${c}">
+                        <span class="tier-indicator" onclick="cycleTier('${escapeHtml(sub)}')" title="click to change tier">${cfg.label}</span>
+                        r/${escapeHtml(sub)}<span class="remove-sub" onclick="removeSubreddit('${escapeHtml(sub)}')">&times;</span>
+                      </span>`;
+                    }).join('')}
+                  </div>
+                </div>`;
               }).join('')}
             </div>
           </div>
