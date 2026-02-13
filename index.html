@@ -81,14 +81,20 @@
     font-family: 'Space Mono', monospace;
     font-size: 9px; padding: 5px 8px;
     border: 2px solid var(--border); background: transparent;
+    color: var(--text-primary);
     cursor: pointer; text-transform: uppercase;
     letter-spacing: 0.05em; font-weight: 700;
+    -webkit-appearance: none;
+    appearance: none;
   }
   .btn-small:hover { background: var(--border); color: var(--bg); }
   .btn-icon {
     width: 30px; height: 30px;
     border: 2px solid var(--border); background: transparent;
+    color: var(--text-primary);
     cursor: pointer; display: flex; align-items: center; justify-content: center;
+    -webkit-appearance: none;
+    appearance: none;
   }
   .btn-icon:hover { background: var(--border); color: var(--bg); }
 
@@ -102,6 +108,7 @@
     font-family: 'Space Mono', monospace; font-size: 9px; padding: 3px 7px;
     border: 2px solid transparent; background: transparent;
     color: var(--text-secondary); cursor: pointer; text-transform: uppercase; font-weight: 700;
+    -webkit-appearance: none; appearance: none;
   }
   .pill:hover { color: var(--text-primary); }
   .pill.active { color: var(--text-primary); border-color: var(--border); background: var(--surface); }
@@ -182,7 +189,7 @@
   @keyframes popIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
   .completion h2 { font-family: 'Libre Baskerville', serif; font-size: var(--text-xl); font-weight: 700; font-style: italic; margin-bottom: 8px; }
   .completion p { font-size: 11px; color: var(--text-secondary); max-width: 340px; line-height: 1.6; margin-bottom: 20px; }
-  .completion button { font-family: 'Space Mono', monospace; font-size: 10px; padding: 8px 20px; border: 2px solid var(--border); background: transparent; cursor: pointer; text-transform: uppercase; font-weight: 700; }
+  .completion button { font-family: 'Space Mono', monospace; font-size: 10px; padding: 8px 20px; border: 2px solid var(--border); background: transparent; color: var(--text-primary); cursor: pointer; text-transform: uppercase; font-weight: 700; -webkit-appearance: none; appearance: none; }
   .completion button:hover { background: var(--border); color: var(--bg); }
 
   .empty-state {
@@ -755,8 +762,8 @@ function render() {
     html += `<div class="error-banner">${escapeHtml(state.error)}</div>`;
   }
 
-  // All caught up screen — only when mark all read was used
-  if (!state.loading && posts.length > 0 && unreadCount === 0 && !state.error) {
+  // All caught up screen — when we have fetched posts but none are unread
+  if (!state.loading && state.posts.length > 0 && unreadCount === 0 && !state.error) {
     // Still render the header, then show caught up
     html += `<div class="completion">
       <pre class="ascii-art">
