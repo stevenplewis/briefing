@@ -1268,7 +1268,37 @@
           </div>
           <a class="post-title" href="${post.is_self ? escapeHtml(post.permalink) : escapeHtml(post.url)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">${escapeHtml(post.title)}</a>
           ${post.selftext ? `<div class="post-selftext" style="border-color:${c}40">${escapeHtml(post.selftext)}${post.selftext.length >= 300 ? "…" : ""}</div>` : ""}
-          ${post.preview && (post.post_hint === "image" || post.post_hint === "rich:video" || post.post_hint === "link") ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.preview)}" alt="" loading="lazy"></a>` : post.thumbnail && !post.selftext ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.thumbnail)}" alt="" loading="lazy"></a>` : ""}
+          ${(() => {
+            // Check for video/gif content that should autoplay
+            const videoUrl =
+              post.preview?.images?.[0]?.variants?.mp4?.source?.url?.replace(
+                /&amp;/g,
+                "&",
+              );
+
+            if (videoUrl) {
+              // Use video element for mp4 versions of gifs
+              return `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">
+        <video class="post-thumbnail" autoplay loop muted playsinline>
+          <source src="${escapeHtml(videoUrl)}" type="video/mp4">
+        </video>
+      </a>`;
+            } else if (
+              post.preview &&
+              (post.post_hint === "image" ||
+                post.post_hint === "rich:video" ||
+                post.post_hint === "link")
+            ) {
+              return `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">
+        <img class="post-thumbnail" src="${escapeHtml(post.preview)}" alt="" loading="lazy">
+      </a>`;
+            } else if (post.thumbnail && !post.selftext) {
+              return `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">
+        <img class="post-thumbnail" src="${escapeHtml(post.thumbnail)}" alt="" loading="lazy">
+      </a>`;
+            }
+            return "";
+          })()}
           <div class="post-footer">
             <a class="post-comments" href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
