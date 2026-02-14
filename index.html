@@ -832,7 +832,7 @@
             batches.push(state.subreddits.slice(i, i + BATCH_SIZE));
           }
 
-          const PARALLEL = 3;
+          const PARALLEL = 5;
           const results = [];
           for (let i = 0; i < batches.length; i += PARALLEL) {
             const chunk = batches.slice(i, i + PARALLEL);
