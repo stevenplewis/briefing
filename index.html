@@ -1,687 +1,1112 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#f0ede6">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<title>briefing — your daily reddit digest</title>
-<script>
-  window.sentryOnLoad = function () {
-    Sentry.init({
-      tracesSampleRate: 1.0,
-    });
-  };
-</script>
-<script
-  src="https://js.sentry-cdn.com/19ba8e5c6dd9277086223e3bb1818223.min.js"
-  crossorigin="anonymous"
-  data-lazy="no"
-></script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-  :root {
-    --bg: #f0ede6;
-    --surface: #e6e2d9;
-    --border: #1a1a1a;
-    --text-primary: #1a1a1a;
-    --text-secondary: #555;
-    --text-muted: #888;
-    --accent: #5a2dff;
-    --accent-bg: #5a2dff15;
-    /* Type scale — perfect fourth (1.333) */
-    --text-xs: 10px;    /* labels, meta */
-    --text-sm: 13px;    /* body, UI */
-    --text-md: 18px;    /* sub-headers */
-    --text-lg: 24px;    /* post titles */
-    --text-xl: 32px;    /* logo */
-  }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#f0ede6" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>briefing — your daily reddit digest</title>
+    <script>
+      window.sentryOnLoad = function () {
+        Sentry.init({
+          tracesSampleRate: 1.0,
+        });
+      };
+    </script>
+    <script
+      src="https://js.sentry-cdn.com/19ba8e5c6dd9277086223e3bb1818223.min.js"
+      crossorigin="anonymous"
+      data-lazy="no"
+    ></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=DM+Mono:wght@400;500&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f0ede6;
+        --surface: #e6e2d9;
+        --border: #1a1a1a;
+        --text-primary: #1a1a1a;
+        --text-secondary: #555;
+        --text-muted: #888;
+        --accent: #5a2dff;
+        --accent-bg: #5a2dff15;
+        /* Type scale — perfect fourth (1.333) */
+        --text-xs: 10px; /* labels, meta */
+        --text-sm: 13px; /* body, UI */
+        --text-md: 18px; /* sub-headers */
+        --text-lg: 24px; /* post titles */
+        --text-xl: 32px; /* logo */
+      }
 
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  html { background: var(--bg); overflow-x: hidden; }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html {
+        background: var(--bg);
+        overflow-x: hidden;
+      }
 
-  body {
-    background: var(--bg);
-    color: var(--text-primary);
-    font-family: 'Space Mono', monospace;
-    line-height: 1.5;
-    min-height: 100vh;
-    -webkit-font-smoothing: antialiased;
-    padding-bottom: env(safe-area-inset-bottom);
-    overflow-x: hidden;
-    width: 100%;
-  }
+      body {
+        background: var(--bg);
+        color: var(--text-primary);
+        font-family: "Space Mono", monospace;
+        line-height: 1.5;
+        min-height: 100vh;
+        -webkit-font-smoothing: antialiased;
+        padding-bottom: env(safe-area-inset-bottom);
+        overflow-x: hidden;
+        width: 100%;
+      }
 
-  .app { max-width: 700px; margin: 0 auto; padding: 0 16px; padding-top: 90px; }
+      .app {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 0 16px;
+        padding-top: 90px;
+      }
 
-  header {
-    position: fixed;
-    top: 0; left: 0; right: 0;
-    z-index: 100;
-    background: var(--bg);
-    border-bottom: 3px solid var(--border);
-    padding-top: env(safe-area-inset-top, 0px);
-    overflow: hidden;
-  }
-  .header-inner { max-width: 700px; margin: 0 auto; padding: 10px 16px 8px; }
-  .header-top { display: flex; justify-content: space-between; align-items: flex-start; }
-  .logo {
-    font-family: 'Libre Baskerville', serif;
-    font-size: var(--text-xl); font-weight: 700; font-style: italic;
-    letter-spacing: -0.03em; text-transform: uppercase;
-  }
-  .header-meta {
-    font-size: var(--text-xs); color: var(--text-muted); margin-top: 2px;
-    text-transform: uppercase; letter-spacing: 0.12em;
-  }
-  .header-actions { display: flex; gap: 4px; }
-  .btn-small {
-    font-family: 'Space Mono', monospace;
-    font-size: 9px; padding: 5px 8px;
-    border: 2px solid var(--border); background: transparent;
-    color: var(--text-primary);
-    cursor: pointer; text-transform: uppercase;
-    letter-spacing: 0.05em; font-weight: 700;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .btn-small:hover { background: var(--border); color: var(--bg); }
-  .btn-icon {
-    width: 30px; height: 30px;
-    border: 2px solid var(--border); background: transparent;
-    color: var(--text-primary);
-    cursor: pointer; display: flex; align-items: center; justify-content: center;
-    -webkit-appearance: none;
-    appearance: none;
-  }
-  .btn-icon:hover { background: var(--border); color: var(--bg); }
+      header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 100;
+        background: var(--bg);
+        border-bottom: 3px solid var(--border);
+        padding-top: env(safe-area-inset-top, 0px);
+        overflow: hidden;
+      }
+      .header-inner {
+        max-width: 700px;
+        margin: 0 auto;
+        padding: 10px 16px 8px;
+      }
+      .header-top {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+      }
+      .logo {
+        font-family: "Libre Baskerville", serif;
+        font-size: var(--text-xl);
+        font-weight: 700;
+        font-style: italic;
+        letter-spacing: -0.03em;
+        text-transform: uppercase;
+      }
+      .header-meta {
+        font-size: var(--text-xs);
+        color: var(--text-muted);
+        margin-top: 2px;
+        text-transform: uppercase;
+        letter-spacing: 0.12em;
+      }
+      .header-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .btn-small {
+        font-family: "Space Mono", monospace;
+        font-size: 9px;
+        padding: 5px 8px;
+        border: 2px solid var(--border);
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      .btn-small:hover {
+        background: var(--border);
+        color: var(--bg);
+      }
+      .btn-icon {
+        width: 30px;
+        height: 30px;
+        border: 2px solid var(--border);
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      .btn-icon:hover {
+        background: var(--border);
+        color: var(--bg);
+      }
 
-  .settings { overflow: hidden; max-height: 0; opacity: 0; transition: max-height 0.35s ease, opacity 0.25s ease; }
-  .settings.open { max-height: 800px; opacity: 1; }
-  .settings-inner { padding: 10px 0 4px; }
-  .setting-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .setting-label { font-size: 9px; color: var(--text-muted); min-width: 80px; text-transform: uppercase; letter-spacing: 0.1em; }
-  .setting-options { display: flex; gap: 3px; flex-wrap: wrap; }
-  .pill {
-    font-family: 'Space Mono', monospace; font-size: 9px; padding: 3px 7px;
-    border: 2px solid transparent; background: transparent;
-    color: var(--text-secondary); cursor: pointer; text-transform: uppercase; font-weight: 700;
-    -webkit-appearance: none; appearance: none;
-  }
-  .pill:hover { color: var(--text-primary); }
-  .pill.active { color: var(--text-primary); border-color: var(--border); background: var(--surface); }
+      .settings {
+        overflow: hidden;
+        max-height: 0;
+        opacity: 0;
+        transition:
+          max-height 0.35s ease,
+          opacity 0.25s ease;
+      }
+      .settings.open {
+        max-height: 800px;
+        opacity: 1;
+      }
+      .settings-inner {
+        padding: 10px 0 4px;
+      }
+      .setting-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 8px;
+      }
+      .setting-label {
+        font-size: 9px;
+        color: var(--text-muted);
+        min-width: 80px;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
+      .setting-options {
+        display: flex;
+        gap: 3px;
+        flex-wrap: wrap;
+      }
+      .pill {
+        font-family: "Space Mono", monospace;
+        font-size: 9px;
+        padding: 3px 7px;
+        border: 2px solid transparent;
+        background: transparent;
+        color: var(--text-secondary);
+        cursor: pointer;
+        text-transform: uppercase;
+        font-weight: 700;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      .pill:hover {
+        color: var(--text-primary);
+      }
+      .pill.active {
+        color: var(--text-primary);
+        border-color: var(--border);
+        background: var(--surface);
+      }
 
-  .subreddit-input-row { display: flex; gap: 6px; margin-top: 4px; }
-  .subreddit-input {
-    flex: 1; font-family: 'Space Mono', monospace; font-size: 11px;
-    padding: 5px 8px; border: 2px solid var(--border); background: transparent; outline: none;
-  }
-  .subreddit-input:focus { background: var(--surface); }
-  .subreddit-input::placeholder { color: var(--text-muted); }
+      .subreddit-input-row {
+        display: flex;
+        gap: 6px;
+        margin-top: 4px;
+      }
+      .subreddit-input {
+        flex: 1;
+        font-family: "Space Mono", monospace;
+        font-size: 11px;
+        padding: 5px 8px;
+        border: 2px solid var(--border);
+        background: transparent;
+        outline: none;
+      }
+      .subreddit-input:focus {
+        background: var(--surface);
+      }
+      .subreddit-input::placeholder {
+        color: var(--text-muted);
+      }
 
-  .sub-tags { display: flex; flex-direction: column; gap: 10px; padding: 8px 0 4px; }
-  .tier-group { display: flex; flex-direction: column; gap: 4px; }
-  .tier-label {
-    font-size: 8px; text-transform: uppercase; letter-spacing: 0.15em;
-    color: var(--text-muted); font-weight: 700; padding-bottom: 2px;
-    border-bottom: 1px solid var(--surface);
-  }
-  .tier-subs { display: flex; gap: 4px; flex-wrap: wrap; }
-  .sub-tag {
-    font-family: 'Space Mono', monospace; font-size: 8px; padding: 2px 5px;
-    border: 1.5px solid; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
-    display: inline-flex; align-items: center; gap: 2px;
-  }
-  .tier-indicator {
-    cursor: pointer; opacity: 0.5; font-size: 7px;
-    padding-right: 2px; transition: opacity 0.1s;
-  }
-  .tier-indicator:hover { opacity: 1; }
-  .sub-tag .remove-sub { margin-left: 3px; cursor: pointer; opacity: 0.5; }
-  .sub-tag .remove-sub:hover { opacity: 1; }
+      .sub-tags {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        padding: 8px 0 4px;
+      }
+      .tier-group {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+      .tier-label {
+        font-size: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+        color: var(--text-muted);
+        font-weight: 700;
+        padding-bottom: 2px;
+        border-bottom: 1px solid var(--surface);
+      }
+      .tier-subs {
+        display: flex;
+        gap: 4px;
+        flex-wrap: wrap;
+      }
+      .sub-tag {
+        font-family: "Space Mono", monospace;
+        font-size: 8px;
+        padding: 2px 5px;
+        border: 1.5px solid;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+      .tier-indicator {
+        cursor: pointer;
+        opacity: 0.5;
+        font-size: 7px;
+        padding-right: 2px;
+        transition: opacity 0.1s;
+      }
+      .tier-indicator:hover {
+        opacity: 1;
+      }
+      .sub-tag .remove-sub {
+        margin-left: 3px;
+        cursor: pointer;
+        opacity: 0.5;
+      }
+      .sub-tag .remove-sub:hover {
+        opacity: 1;
+      }
 
-  .loading-state { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; gap: 16px; }
-  .spinner { width: 20px; height: 20px; border: 3px solid var(--surface); border-top-color: var(--border); border-radius: 50%; animation: spin 0.6s linear infinite; }
-  @keyframes spin { to { transform: rotate(360deg); } }
-  .loading-text { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em; }
+      .loading-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 50vh;
+        gap: 16px;
+      }
+      .spinner {
+        width: 20px;
+        height: 20px;
+        border: 3px solid var(--surface);
+        border-top-color: var(--border);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      .loading-text {
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+      }
 
-  .error-banner { margin: 12px 0; padding: 10px; border: 2px solid var(--border); font-size: 11px; background: #ff000010; }
+      .error-banner {
+        margin: 12px 0;
+        padding: 10px;
+        border: 2px solid var(--border);
+        font-size: 11px;
+        background: #ff000010;
+      }
 
-  .post-card { padding: 18px 0; border-bottom: 2px solid var(--border); animation: fadeUp 0.3s ease both; transition: opacity 0.4s ease; }
-  .post-card:last-child { border-bottom: none; }
-  .post-card.read { opacity: 0.2; }
-  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+      .post-card {
+        padding: 18px 0;
+        border-bottom: 2px solid var(--border);
+        animation: fadeUp 0.3s ease both;
+        transition: opacity 0.4s ease;
+      }
+      .post-card:last-child {
+        border-bottom: none;
+      }
+      .post-card.read {
+        opacity: 0.2;
+      }
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(6px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
 
-  .post-layout { display: flex; gap: 12px; align-items: flex-start; }
-  .post-score { display: flex; flex-direction: column; align-items: center; min-width: 32px; padding-top: 2px; }
-  .post-score .arrow { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 6px solid currentColor; margin-bottom: 3px; }
-  .post-score .num { font-size: 11px; font-weight: 700; }
-  .post-content { flex: 1; min-width: 0; overflow: hidden; }
-  .post-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 4px; }
-  .post-sub {
-    font-size: 8px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em;
-    padding: 1px 5px; color: var(--accent);
-  }
-  .post-flair { font-size: 8px; color: var(--text-muted); border: 1px solid var(--text-muted); padding: 1px 4px; text-transform: uppercase; }
-  .post-time { font-size: 9px; color: var(--text-muted); }
-  .post-title {
-    font-family: 'Libre Baskerville', Georgia, serif;
-    font-size: var(--text-lg); font-weight: 700; line-height: 1.3;
-    color: var(--text-primary); text-decoration: none; display: block; margin-bottom: 6px;
-    word-break: break-word;
-  }
-  .post-title:hover { color: var(--accent); }
-  .post-card.read .post-title { color: var(--text-muted); }
-  .post-selftext { font-size: var(--text-sm); color: var(--text-secondary); line-height: 1.6; margin-bottom: 6px; padding-left: 10px; border-left: 3px solid var(--accent); }
-  .post-thumbnail { margin: 6px 0; max-width: 100%; max-height: 280px; object-fit: cover; border: 2px solid var(--border); }
-  .post-footer { display: flex; align-items: center; gap: 12px; }
-  .post-comments { font-size: 9px; color: var(--text-muted); display: flex; align-items: center; gap: 4px; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
-  .post-comments:hover { color: var(--text-primary); }
-  .post-link { font-size: 9px; color: var(--text-muted); text-decoration: none; }
-  .post-link:hover { color: var(--accent); }
+      .post-layout {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+      }
+      .post-score {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 32px;
+        padding-top: 2px;
+      }
+      .post-score .arrow {
+        width: 0;
+        height: 0;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-bottom: 6px solid currentColor;
+        margin-bottom: 3px;
+      }
+      .post-score .num {
+        font-size: 11px;
+        font-weight: 700;
+      }
+      .post-content {
+        flex: 1;
+        min-width: 0;
+        overflow: hidden;
+      }
+      .post-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 4px;
+      }
+      .post-sub {
+        font-size: 8px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding: 1px 5px;
+        color: var(--accent);
+      }
+      .post-flair {
+        font-size: 8px;
+        color: var(--text-muted);
+        border: 1px solid var(--text-muted);
+        padding: 1px 4px;
+        text-transform: uppercase;
+      }
+      .post-time {
+        font-size: 9px;
+        color: var(--text-muted);
+      }
+      .post-title {
+        font-family: "Libre Baskerville", Georgia, serif;
+        font-size: var(--text-lg);
+        font-weight: 700;
+        line-height: 1.3;
+        color: var(--text-primary);
+        text-decoration: none;
+        display: block;
+        margin-bottom: 6px;
+        word-break: break-word;
+      }
+      .post-title:hover {
+        color: var(--accent);
+      }
+      .post-card.read .post-title {
+        color: var(--text-muted);
+      }
+      .post-selftext {
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+        line-height: 1.6;
+        margin-bottom: 6px;
+        padding-left: 10px;
+        border-left: 3px solid var(--accent);
+      }
+      .post-thumbnail {
+        margin: 6px 0;
+        max-width: 100%;
+        max-height: 280px;
+        object-fit: cover;
+        border: 2px solid var(--border);
+      }
+      .post-footer {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .post-comments {
+        font-size: 9px;
+        color: var(--text-muted);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        text-decoration: none;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 700;
+      }
+      .post-comments:hover {
+        color: var(--text-primary);
+      }
+      .post-link {
+        font-size: 9px;
+        color: var(--text-muted);
+        text-decoration: none;
+      }
+      .post-link:hover {
+        color: var(--accent);
+      }
 
-  .end-marker { text-align: center; padding: 40px 0 60px; font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.15em; }
+      .end-marker {
+        text-align: center;
+        padding: 40px 0 60px;
+        font-size: 10px;
+        color: var(--text-muted);
+        text-transform: uppercase;
+        letter-spacing: 0.15em;
+      }
 
-  .completion { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 50vh; text-align: center; padding: 40px 20px; animation: fadeUp 0.6s ease; }
-  .completion-icon { width: 56px; height: 56px; border: 3px solid var(--border); display: flex; align-items: center; justify-content: center; margin-bottom: 20px; animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
-  @keyframes popIn { from { transform: scale(0.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .completion h2 { font-family: 'Libre Baskerville', serif; font-size: var(--text-xl); font-weight: 700; font-style: italic; margin-bottom: 8px; }
-  .completion p { font-size: 11px; color: var(--text-secondary); max-width: 340px; line-height: 1.6; margin-bottom: 20px; }
-  .completion button { font-family: 'Space Mono', monospace; font-size: 10px; padding: 8px 20px; border: 2px solid var(--border); background: transparent; color: var(--text-primary); cursor: pointer; text-transform: uppercase; font-weight: 700; -webkit-appearance: none; appearance: none; }
-  .completion button:hover { background: var(--border); color: var(--bg); }
+      .completion {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 50vh;
+        text-align: center;
+        padding: 40px 20px;
+        animation: fadeUp 0.6s ease;
+      }
+      .completion-icon {
+        width: 56px;
+        height: 56px;
+        border: 3px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 20px;
+        animation: popIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+      }
+      @keyframes popIn {
+        from {
+          transform: scale(0.4);
+          opacity: 0;
+        }
+        to {
+          transform: scale(1);
+          opacity: 1;
+        }
+      }
+      .completion h2 {
+        font-family: "Libre Baskerville", serif;
+        font-size: var(--text-xl);
+        font-weight: 700;
+        font-style: italic;
+        margin-bottom: 8px;
+      }
+      .completion p {
+        font-size: 11px;
+        color: var(--text-secondary);
+        max-width: 340px;
+        line-height: 1.6;
+        margin-bottom: 20px;
+      }
+      .completion button {
+        font-family: "Space Mono", monospace;
+        font-size: 10px;
+        padding: 8px 20px;
+        border: 2px solid var(--border);
+        background: transparent;
+        color: var(--text-primary);
+        cursor: pointer;
+        text-transform: uppercase;
+        font-weight: 700;
+        -webkit-appearance: none;
+        appearance: none;
+      }
+      .completion button:hover {
+        background: var(--border);
+        color: var(--bg);
+      }
 
-  .empty-state {
-    display: flex; flex-direction: column;
-    align-items: center; justify-content: center;
-    text-align: center; padding: 20px;
-    min-height: calc(100vh - 120px);
-  }
-  .ascii-art {
-    font-family: 'Space Mono', monospace;
-    font-size: 14px; line-height: 1.3;
-    color: var(--text-muted); margin-bottom: 16px;
-  }
-  .empty-state h3 {
-    font-family: 'Libre Baskerville', serif;
-    font-size: var(--text-md); font-weight: 700;
-    font-style: italic; margin-bottom: 6px;
-  }
-  .empty-state p {
-    font-size: var(--text-sm); color: var(--text-secondary);
-    max-width: 300px; line-height: 1.6;
-  }
+      .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 20px;
+        min-height: calc(100vh - 120px);
+      }
+      .ascii-art {
+        font-family: "Space Mono", monospace;
+        font-size: 14px;
+        line-height: 1.3;
+        color: var(--text-muted);
+        margin-bottom: 16px;
+      }
+      .empty-state h3 {
+        font-family: "Libre Baskerville", serif;
+        font-size: var(--text-md);
+        font-weight: 700;
+        font-style: italic;
+        margin-bottom: 6px;
+      }
+      .empty-state p {
+        font-size: var(--text-sm);
+        color: var(--text-secondary);
+        max-width: 300px;
+        line-height: 1.6;
+      }
 
-  @media (max-width: 480px) {
-    .post-title { font-size: 20px; }
-    .logo { font-size: 26px; }
-    .post-score { min-width: 28px; }
-    .app { padding-top: 85px; }
-  }
-</style>
-</head>
-<body>
-<div class="app" id="app"></div>
+      @media (max-width: 480px) {
+        .post-title {
+          font-size: 20px;
+        }
+        .logo {
+          font-size: 26px;
+        }
+        .post-score {
+          min-width: 28px;
+        }
+        .app {
+          padding-top: 85px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app" id="app"></div>
 
-<script>
-// ═══════════════════════════════════════════
-// SENTRY — initialized via loader script in <head>
-// ═══════════════════════════════════════════
+    <script>
+      // ═══════════════════════════════════════════
+      // SENTRY — initialized via loader script in <head>
+      // ═══════════════════════════════════════════
 
-// Helper to add Sentry breadcrumbs
-function track(category, message, data = {}) {
-  if (window.Sentry) {
-    Sentry.addBreadcrumb({ category, message, data, level: 'info' });
-  }
-}
+      // Helper to add Sentry breadcrumbs
+      function track(category, message, data = {}) {
+        if (window.Sentry) {
+          Sentry.addBreadcrumb({ category, message, data, level: "info" });
+        }
+      }
 
-// ═══════════════════════════════════════════
-// CONFIG — Edit your subreddits and tiers here!
-// Tiers: "primary" (2x boost, 2 posts), "regular" (normal, 2 posts), "sprinkle" (0.3x, 1 post)
-// ═══════════════════════════════════════════
-const DEFAULT_TIERS = {
-  // PRIMARY — your main interests, always surface
-  "science":                "primary",
-  "space":                  "primary",
-  "technology":             "primary",
-  "damnthatsinteresting":   "primary",
-  "dataisbeautiful":        "primary",
-  "interestingasfuck":      "primary",
-  "todayilearned":          "primary",
-  "worldnews":              "primary",
-  "outoftheloop":           "primary",
-  "nasa":                   "primary",
-  "apple":                  "primary",
-  "bayarea":                "primary",
-  "sanfrancisco":           "primary",
-  "law":                    "primary",
-  "theydidthemath":         "primary",
+      // ═══════════════════════════════════════════
+      // CONFIG — Edit your subreddits and tiers here!
+      // Tiers: "primary" (2x boost, 2 posts), "regular" (normal, 2 posts), "sprinkle" (0.3x, 1 post)
+      // ═══════════════════════════════════════════
+      const DEFAULT_TIERS = {
+        // PRIMARY — your main interests, always surface
+        boardgames: "primary",
+        worldnews: "primary",
+        technology: "primary",
+        science: "primary",
+        bayarea: "primary",
+        sanfrancisco: "primary",
+        law: "primary",
+        design: "primary",
+        gaming: "primary",
+        music: "primary",
+        movies: "primary",
 
-  // REGULAR — solid subs, normal weight
-  "webdev":                 "regular",
-  "historyporn":            "regular",
-  "coolguides":             "regular",
-  "murderedbywords":        "regular",
-  "oldschoolcool":          "regular",
-  "streetphotography":      "regular",
-  "accidentalrenaissance":  "regular",
-  "anticonsumption":        "regular",
-  "millennials":            "regular",
-  "twinpeaks":              "regular",
-  "severanceappletvplus":   "regular",
-  "moviedetails":           "regular",
-  "tvdetails":              "regular",
-  "natureisfuckinglit":     "regular",
-  "oceansarefuckinglit":    "regular",
-  "thatsinsane":            "regular",
-  "woahdude":               "regular",
-  "design":                 "regular",
-  "isthisai":               "regular",
+        // REGULAR — solid subs, normal weight
+        nottheonion: "regular",
+        theydidthemath: "regular",
+        millennials: "regular",
+        webdev: "regular",
+        moodcamera: "regular",
+        newgirl: "regular",
+        space: "regular",
+        spaceporn: "regular",
+        damnthatsinteresting: "regular",
+        dataisbeautiful: "regular",
+        interestingasfuck: "regular",
+        todayilearned: "regular",
+        outoftheloop: "regular",
+        nasa: "regular",
 
-  // SPRINKLE — nice to see occasionally, don't dominate
-  "90s":                    "sprinkle",
-  "analog":                 "sprinkle",
-  "animalsbeingbros":       "sprinkle",
-  "animalsbeingderps":      "sprinkle",
-  "boardgames":             "sprinkle",
-  "humansbeingbros":        "sprinkle",
-  "mademesmile":            "sprinkle",
-  "oddlysatisfying":        "sprinkle",
-  "underratedmovies":       "sprinkle",
-  "thedepthsbelow":         "sprinkle",
-  "moodcamera":             "sprinkle",
-  "n64":                    "sprinkle",
-  "newgirl":                "sprinkle",
-  "jeffrosenstock":         "sprinkle",
-  "mothershiprpg":          "sprinkle",
-  "obscuremusicthatslaps":  "sprinkle",
-};
+        // SPRINKLE — nice to see occasionally, don't dominate
+        "90s": "sprinkle",
+        analog: "sprinkle",
+        animalsbeingbros: "sprinkle",
+        animalsbeingderps: "sprinkle",
+        apple: "sprinkle",
+        humansbeingbros: "sprinkle",
+        mademesmile: "sprinkle",
+        oddlysatisfying: "sprinkle",
+        underratedmovies: "sprinkle",
+        thedepthsbelow: "sprinkle",
+        n64: "sprinkle",
+        jeffrosenstock: "sprinkle",
+        mothershiprpg: "sprinkle",
+        obscuremusicthatslaps: "sprinkle",
+        wheredidthesodago: "sprinkle",
+        birdswitharms: "sprinkle",
+        isthisai: "sprinkle",
+        mildlyinteresting: "sprinkle",
+        dogsgettingdogs: "sprinkle",
+        aww: "sprinkle",
+        frugal: "sprinkle",
+        twinpeaks: "sprinkle",
+        severanceappletvplus: "sprinkle",
+        moviedetails: "sprinkle",
+        tvdetails: "sprinkle",
+        natureisfuckinglit: "sprinkle",
+        oceansarefuckinglit: "sprinkle",
+        thatsinsane: "sprinkle",
+        woahdude: "sprinkle",
+        historyporn: "sprinkle",
+        coolguides: "sprinkle",
+        murderedbywords: "sprinkle",
+        oldschoolcool: "sprinkle",
+        streetphotography: "sprinkle",
+        accidentalrenaissance: "sprinkle",
+        anticonsumption: "sprinkle",
+      };
 
-const DEFAULT_SUBS = Object.keys(DEFAULT_TIERS);
-const TIER_CONFIG = {
-  primary:  { boost: 2.0, maxPosts: 2, label: '+++', order: 0 },
-  regular:  { boost: 1.0, maxPosts: 2, label: '==',  order: 1 },
-  sprinkle: { boost: 0.3, maxPosts: 1, label: '~',   order: 2 },
-};
-const TIER_CYCLE = ['primary', 'regular', 'sprinkle'];
+      const DEFAULT_SUBS = Object.keys(DEFAULT_TIERS);
+      const TIER_CONFIG = {
+        primary: { boost: 2.0, maxPosts: 2, label: "+++", order: 0 },
+        regular: { boost: 1.0, maxPosts: 2, label: "==", order: 1 },
+        sprinkle: { boost: 0.3, maxPosts: 1, label: "~", order: 2 },
+      };
+      const TIER_CYCLE = ["primary", "regular", "sprinkle"];
 
-const SUB_COLORS = [
-  "#007575", "#936119", "#c0304a", "#26754f",
-  "#7040c0", "#a3511b", "#1e6aa7", "#a83070",
-  "#3e7328", "#88641c", "#3060a0", "#b83030",
-];
+      const SUB_COLORS = [
+        "#007575",
+        "#936119",
+        "#c0304a",
+        "#26754f",
+        "#7040c0",
+        "#a3511b",
+        "#1e6aa7",
+        "#a83070",
+        "#3e7328",
+        "#88641c",
+        "#3060a0",
+        "#b83030",
+      ];
 
-function getSubColor(sub) {
-  let hash = 0;
-  for (let i = 0; i < sub.length; i++) hash = sub.charCodeAt(i) + ((hash << 5) - hash);
-  return SUB_COLORS[Math.abs(hash) % SUB_COLORS.length];
-}
+      function getSubColor(sub) {
+        let hash = 0;
+        for (let i = 0; i < sub.length; i++)
+          hash = sub.charCodeAt(i) + ((hash << 5) - hash);
+        return SUB_COLORS[Math.abs(hash) % SUB_COLORS.length];
+      }
 
-// ═══════════════════════════════════════════
-// STATE
-// ═══════════════════════════════════════════
-let state = {
-  subreddits: JSON.parse(localStorage.getItem('briefing_subs') || 'null') || [...DEFAULT_SUBS],
-  tiers: JSON.parse(localStorage.getItem('briefing_tiers') || 'null') || {...DEFAULT_TIERS},
-  posts: [],
-  readPosts: new Set(JSON.parse(localStorage.getItem('briefing_read') || '[]')),
-  loading: false,
-  error: null,
-  settingsOpen: false,
-  sortBy: localStorage.getItem('briefing_sort') || 'score',
-  digestSize: 25,
-  timeRange: localStorage.getItem('briefing_time') || 'day',
-  isComplete: false,
-  lastFetch: localStorage.getItem('briefing_lastfetch') || null,
-};
+      // ═══════════════════════════════════════════
+      // STATE
+      // ═══════════════════════════════════════════
+      let state = {
+        subreddits: JSON.parse(
+          localStorage.getItem("briefing_subs") || "null",
+        ) || [...DEFAULT_SUBS],
+        tiers: JSON.parse(localStorage.getItem("briefing_tiers") || "null") || {
+          ...DEFAULT_TIERS,
+        },
+        posts: [],
+        readPosts: new Set(
+          JSON.parse(localStorage.getItem("briefing_read") || "[]"),
+        ),
+        loading: false,
+        error: null,
+        settingsOpen: false,
+        sortBy: localStorage.getItem("briefing_sort") || "score",
+        digestSize: 25,
+        timeRange: localStorage.getItem("briefing_time") || "day",
+        isComplete: false,
+        lastFetch: localStorage.getItem("briefing_lastfetch") || null,
+      };
 
-// Ensure any new subs get a default tier
-state.subreddits.forEach(s => { if (!state.tiers[s]) state.tiers[s] = 'regular'; });
-
-function getSubTier(sub) { return state.tiers[sub] || 'regular'; }
-
-function saveSubs() { localStorage.setItem('briefing_subs', JSON.stringify(state.subreddits)); }
-function saveTiers() { localStorage.setItem('briefing_tiers', JSON.stringify(state.tiers)); }
-function saveRead() { localStorage.setItem('briefing_read', JSON.stringify([...state.readPosts])); }
-function savePrefs() {
-  localStorage.setItem('briefing_sort', state.sortBy);
-  localStorage.setItem('briefing_limit', state.digestSize);
-  localStorage.setItem('briefing_time', state.timeRange);
-}
-
-// ═══════════════════════════════════════════
-// FETCH REDDIT DATA
-// ═══════════════════════════════════════════
-
-// Your own Cloudflare Worker proxy
-const PROXY_BASE = 'https://reddit-proxy.steven-413.workers.dev';
-const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
-
-function parsePosts(data) {
-  return (data.data?.children || []).map(child => {
-    const d = child.data;
-    return {
-      id: d.id,
-      subreddit: d.subreddit,
-      title: d.title,
-      author: d.author,
-      score: d.score,
-      comments: d.num_comments,
-      created: d.created_utc,
-      selftext: (d.selftext || '').slice(0, 300),
-      url: d.url,
-      permalink: `https://www.reddit.com${d.permalink}`,
-      thumbnail: (d.thumbnail && d.thumbnail.startsWith('http'))
-        ? d.thumbnail : null,
-      preview: d.preview?.images?.[0]?.source?.url?.replace(/&amp;/g, '&') || null,
-      post_hint: d.post_hint || null,
-      flair: d.link_flair_text || null,
-      is_self: d.is_self,
-      domain: d.domain,
-    };
-  });
-}
-
-async function fetchMultiSub(subs, timeRange) {
-  // Reddit supports /r/sub1+sub2+sub3/top.json — combine up to ~10 per request
-  const combined = subs.join('+');
-  const path = timeRange === 'hot'
-    ? `/r/${combined}/hot.json?limit=${subs.length * 5}&raw_json=1`
-    : `/r/${combined}/top.json?t=${timeRange}&limit=${subs.length * 5}&raw_json=1`;
-
-  const resp = await fetch(PROXY_BASE + path);
-  if (!resp.ok) throw new Error(`Batch fetch failed: ${resp.status}`);
-  const data = await resp.json();
-  return parsePosts(data);
-}
-
-async function fetchAllPosts(forceRefresh = false) {
-  // Check cache first — render from cache immediately
-  if (!forceRefresh) {
-    const cached = localStorage.getItem('briefing_cache');
-    const cachedTime = localStorage.getItem('briefing_cache_time');
-    const cachedSubs = localStorage.getItem('briefing_cache_subs');
-    const cachedRange = localStorage.getItem('briefing_cache_range');
-    if (cached && cachedTime &&
-        Date.now() - parseInt(cachedTime) < CACHE_TTL &&
-        cachedSubs === JSON.stringify(state.subreddits) &&
-        cachedRange === state.timeRange) {
-      state.posts = JSON.parse(cached);
-      state.loading = false;
-      state.lastFetch = new Date(parseInt(cachedTime)).toISOString();
-      track('fetch', 'cache_hit', { age: Math.round((Date.now() - parseInt(cachedTime)) / 1000) + 's', posts: state.posts.length });
-      render();
-      return;
-    }
-  }
-
-  const fetchStart = Date.now();
-  const previousIds = new Set(state.posts.map(p => p.id));
-
-  state.loading = true;
-  state.error = null;
-  if (state.posts.length === 0) render();
-
-  try {
-    const BATCH_SIZE = 10;
-    const batches = [];
-    for (let i = 0; i < state.subreddits.length; i += BATCH_SIZE) {
-      batches.push(state.subreddits.slice(i, i + BATCH_SIZE));
-    }
-
-    const PARALLEL = 3;
-    const results = [];
-    for (let i = 0; i < batches.length; i += PARALLEL) {
-      const chunk = batches.slice(i, i + PARALLEL);
-      state.loadingProgress = `${Math.min((i + PARALLEL) * BATCH_SIZE, state.subreddits.length)}/${state.subreddits.length} subs`;
-      if (state.posts.length === 0) render();
-      const chunkResults = await Promise.allSettled(
-        chunk.map(batch => fetchMultiSub(batch, state.timeRange))
-      );
-      chunkResults.forEach(r => {
-        if (r.status === 'fulfilled') results.push(...r.value);
+      // Ensure any new subs get a default tier
+      state.subreddits.forEach((s) => {
+        if (!state.tiers[s]) state.tiers[s] = "regular";
       });
-    }
-    state.loadingProgress = null;
 
-    const seen = new Set();
-    const newPosts = results.filter(p => {
-      if (seen.has(p.id)) return false;
-      seen.add(p.id);
-      return true;
-    });
+      function getSubTier(sub) {
+        return state.tiers[sub] || "regular";
+      }
 
-    const genuinelyNew = newPosts.filter(p => !previousIds.has(p.id)).length;
-    const fetchDuration = Date.now() - fetchStart;
+      function saveSubs() {
+        localStorage.setItem("briefing_subs", JSON.stringify(state.subreddits));
+      }
+      function saveTiers() {
+        localStorage.setItem("briefing_tiers", JSON.stringify(state.tiers));
+      }
+      function saveRead() {
+        localStorage.setItem(
+          "briefing_read",
+          JSON.stringify([...state.readPosts]),
+        );
+      }
+      function savePrefs() {
+        localStorage.setItem("briefing_sort", state.sortBy);
+        localStorage.setItem("briefing_limit", state.digestSize);
+        localStorage.setItem("briefing_time", state.timeRange);
+      }
 
-    state.posts = newPosts;
-    state.lastFetch = new Date().toISOString();
-    localStorage.setItem('briefing_cache', JSON.stringify(state.posts));
-    localStorage.setItem('briefing_cache_time', Date.now().toString());
-    localStorage.setItem('briefing_cache_subs', JSON.stringify(state.subreddits));
-    localStorage.setItem('briefing_cache_range', state.timeRange);
-    localStorage.setItem('briefing_lastfetch', state.lastFetch);
+      // ═══════════════════════════════════════════
+      // FETCH REDDIT DATA
+      // ═══════════════════════════════════════════
 
-    track('fetch', 'fetch_complete', {
-      duration: fetchDuration + 'ms',
-      totalPosts: newPosts.length,
-      newPosts: genuinelyNew,
-      subs: state.subreddits.length,
-      forced: forceRefresh,
-    });
+      // Your own Cloudflare Worker proxy
+      const PROXY_BASE = "https://reddit-proxy.steven-413.workers.dev";
+      const CACHE_TTL = 15 * 60 * 1000; // 15 minutes
 
-  } catch (e) {
-    state.error = e.message;
-    track('fetch', 'fetch_error', { error: e.message });
-    if (window.Sentry) Sentry.captureException(e);
-  }
+      function parsePosts(data) {
+        return (data.data?.children || []).map((child) => {
+          const d = child.data;
+          return {
+            id: d.id,
+            subreddit: d.subreddit,
+            title: d.title,
+            author: d.author,
+            score: d.score,
+            comments: d.num_comments,
+            created: d.created_utc,
+            selftext: (d.selftext || "").slice(0, 300),
+            url: d.url,
+            permalink: `https://www.reddit.com${d.permalink}`,
+            thumbnail:
+              d.thumbnail && d.thumbnail.startsWith("http")
+                ? d.thumbnail
+                : null,
+            preview:
+              d.preview?.images?.[0]?.source?.url?.replace(/&amp;/g, "&") ||
+              null,
+            post_hint: d.post_hint || null,
+            flair: d.link_flair_text || null,
+            is_self: d.is_self,
+            domain: d.domain,
+          };
+        });
+      }
 
-  state.loading = false;
-  render();
-}
+      async function fetchMultiSub(subs, timeRange) {
+        // Reddit supports /r/sub1+sub2+sub3/top.json — combine up to ~10 per request
+        const combined = subs.join("+");
+        const path =
+          timeRange === "hot"
+            ? `/r/${combined}/hot.json?limit=${subs.length * 5}&raw_json=1`
+            : `/r/${combined}/top.json?t=${timeRange}&limit=${subs.length * 5}&raw_json=1`;
 
-// ═══════════════════════════════════════════
-// HELPERS
-// ═══════════════════════════════════════════
-function formatScore(n) {
-  if (n >= 100000) return (n / 1000).toFixed(0) + 'k';
-  if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  return n;
-}
+        const resp = await fetch(PROXY_BASE + path);
+        if (!resp.ok) throw new Error(`Batch fetch failed: ${resp.status}`);
+        const data = await resp.json();
+        return parsePosts(data);
+      }
 
-function timeAgo(utc) {
-  const diff = Date.now() / 1000 - utc;
-  if (diff < 3600) return Math.floor(diff / 60) + 'm';
-  if (diff < 86400) return Math.floor(diff / 3600) + 'h';
-  return Math.floor(diff / 86400) + 'd';
-}
+      async function fetchAllPosts(forceRefresh = false) {
+        // Check cache first — render from cache immediately
+        if (!forceRefresh) {
+          const cached = localStorage.getItem("briefing_cache");
+          const cachedTime = localStorage.getItem("briefing_cache_time");
+          const cachedSubs = localStorage.getItem("briefing_cache_subs");
+          const cachedRange = localStorage.getItem("briefing_cache_range");
+          if (
+            cached &&
+            cachedTime &&
+            Date.now() - parseInt(cachedTime) < CACHE_TTL &&
+            cachedSubs === JSON.stringify(state.subreddits) &&
+            cachedRange === state.timeRange
+          ) {
+            state.posts = JSON.parse(cached);
+            state.loading = false;
+            state.lastFetch = new Date(parseInt(cachedTime)).toISOString();
+            track("fetch", "cache_hit", {
+              age: Math.round((Date.now() - parseInt(cachedTime)) / 1000) + "s",
+              posts: state.posts.length,
+            });
+            render();
+            return;
+          }
+        }
 
-function escapeHtml(str) {
-  const div = document.createElement('div');
-  div.textContent = str;
-  return div.innerHTML;
-}
+        const fetchStart = Date.now();
+        const previousIds = new Set(state.posts.map((p) => p.id));
 
-function getSortedPosts() {
-  // Only show unread posts
-  const unread = state.posts.filter(p => !state.readPosts.has(p.id));
+        state.loading = true;
+        state.error = null;
+        if (state.posts.length === 0) render();
 
-  // If sorting by 'new', skip normalization — just enforce per-tier caps
-  if (state.sortBy === 'new') {
-    const subCount = {};
-    return [...unread]
-      .sort((a, b) => b.created - a.created)
-      .filter(p => {
-        const tier = getSubTier(p.subreddit);
-        const max = TIER_CONFIG[tier]?.maxPosts || 2;
-        subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
-        return subCount[p.subreddit] <= max;
-      })
-      .slice(0, state.digestSize);
-  }
+        try {
+          const BATCH_SIZE = 10;
+          const batches = [];
+          for (let i = 0; i < state.subreddits.length; i += BATCH_SIZE) {
+            batches.push(state.subreddits.slice(i, i + BATCH_SIZE));
+          }
 
-  // Calculate per-subreddit average score for normalization
-  const subScores = {};
-  state.posts.forEach(p => {
-    if (!subScores[p.subreddit]) subScores[p.subreddit] = { total: 0, count: 0 };
-    subScores[p.subreddit].total += p.score;
-    subScores[p.subreddit].count += 1;
-  });
+          const PARALLEL = 3;
+          const results = [];
+          for (let i = 0; i < batches.length; i += PARALLEL) {
+            const chunk = batches.slice(i, i + PARALLEL);
+            state.loadingProgress = `${Math.min((i + PARALLEL) * BATCH_SIZE, state.subreddits.length)}/${state.subreddits.length} subs`;
+            if (state.posts.length === 0) render();
+            const chunkResults = await Promise.allSettled(
+              chunk.map((batch) => fetchMultiSub(batch, state.timeRange)),
+            );
+            chunkResults.forEach((r) => {
+              if (r.status === "fulfilled") results.push(...r.value);
+            });
+          }
+          state.loadingProgress = null;
 
-  const subAvg = {};
-  for (const [sub, data] of Object.entries(subScores)) {
-    subAvg[sub] = data.count > 0 ? data.total / data.count : 1;
-  }
+          const seen = new Set();
+          const newPosts = results.filter((p) => {
+            if (seen.has(p.id)) return false;
+            seen.add(p.id);
+            return true;
+          });
 
-  const scored = unread.map(p => {
-    const avg = subAvg[p.subreddit] || 1;
-    const rawFactor = Math.log10(Math.max(p.score, 1)) / 5;
-    const field = state.sortBy === 'comments' ? p.comments : p.score;
-    const fieldAvg = state.sortBy === 'comments'
-      ? (subScores[p.subreddit]?.count > 0
-          ? state.posts.filter(x => x.subreddit === p.subreddit).reduce((s, x) => s + x.comments, 0) / subScores[p.subreddit].count
-          : 1)
-      : avg;
-    const fieldNorm = field / Math.max(fieldAvg, 1);
+          const genuinelyNew = newPosts.filter(
+            (p) => !previousIds.has(p.id),
+          ).length;
+          const fetchDuration = Date.now() - fetchStart;
 
-    // Time decay
-    const hoursOld = Math.max((Date.now() / 1000 - p.created) / 3600, 0.5);
-    const timeFactor = 1 / Math.pow(hoursOld, 0.4);
+          state.posts = newPosts;
+          state.lastFetch = new Date().toISOString();
+          localStorage.setItem("briefing_cache", JSON.stringify(state.posts));
+          localStorage.setItem("briefing_cache_time", Date.now().toString());
+          localStorage.setItem(
+            "briefing_cache_subs",
+            JSON.stringify(state.subreddits),
+          );
+          localStorage.setItem("briefing_cache_range", state.timeRange);
+          localStorage.setItem("briefing_lastfetch", state.lastFetch);
 
-    // Base blend: 50% normalized score, 20% raw magnitude, 30% time freshness
-    const baseBlend = fieldNorm * 0.5 + rawFactor * 0.2 + timeFactor * 3 * 0.3;
+          track("fetch", "fetch_complete", {
+            duration: fetchDuration + "ms",
+            totalPosts: newPosts.length,
+            newPosts: genuinelyNew,
+            subs: state.subreddits.length,
+            forced: forceRefresh,
+          });
+        } catch (e) {
+          state.error = e.message;
+          track("fetch", "fetch_error", { error: e.message });
+          if (window.Sentry) Sentry.captureException(e);
+        }
 
-    // Apply tier boost
-    const tier = getSubTier(p.subreddit);
-    const boost = TIER_CONFIG[tier]?.boost || 1.0;
-    const blended = baseBlend * boost;
+        state.loading = false;
+        render();
+      }
 
-    return { ...p, _blended: blended, _tier: tier };
-  });
+      // ═══════════════════════════════════════════
+      // HELPERS
+      // ═══════════════════════════════════════════
+      function formatScore(n) {
+        if (n >= 100000) return (n / 1000).toFixed(0) + "k";
+        if (n >= 1000) return (n / 1000).toFixed(1).replace(/\.0$/, "") + "k";
+        return n;
+      }
 
-  scored.sort((a, b) => b._blended - a._blended);
+      function timeAgo(utc) {
+        const diff = Date.now() / 1000 - utc;
+        if (diff < 3600) return Math.floor(diff / 60) + "m";
+        if (diff < 86400) return Math.floor(diff / 3600) + "h";
+        return Math.floor(diff / 86400) + "d";
+      }
 
-  // Enforce per-sub cap based on tier
-  const subCount = {};
-  return scored.filter(p => {
-    const max = TIER_CONFIG[p._tier]?.maxPosts || 2;
-    subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
-    return subCount[p.subreddit] <= max;
-  }).slice(0, state.digestSize);
-}
+      function escapeHtml(str) {
+        const div = document.createElement("div");
+        div.textContent = str;
+        return div.innerHTML;
+      }
 
-// ═══════════════════════════════════════════
-// ACTIONS
-// ═══════════════════════════════════════════
-function markRead(id) {
-  state.readPosts.add(id);
-  saveRead();
-  track('engagement', 'post_clicked', { postId: id });
-  const el = document.querySelector(`.post-card[data-post-id="${id}"]`);
-  if (el) el.classList.add('read');
-  // Update header count
-  updateHeaderCount();
-}
+      function getSortedPosts() {
+        // Only show unread posts
+        const unread = state.posts.filter((p) => !state.readPosts.has(p.id));
 
-function markAllRead() {
-  const count = state.posts.length;
-  state.posts.forEach(p => state.readPosts.add(p.id));
-  saveRead();
-  track('engagement', 'mark_all_read', { postCount: count });
-  render();
-}
+        // If sorting by 'new', skip normalization — just enforce per-tier caps
+        if (state.sortBy === "new") {
+          const subCount = {};
+          return [...unread]
+            .sort((a, b) => b.created - a.created)
+            .filter((p) => {
+              const tier = getSubTier(p.subreddit);
+              const max = TIER_CONFIG[tier]?.maxPosts || 2;
+              subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
+              return subCount[p.subreddit] <= max;
+            })
+            .slice(0, state.digestSize);
+        }
 
-function checkCompletion() {
-  const posts = getSortedPosts();
-  if (posts.length > 0 && posts.every(p => state.readPosts.has(p.id))) {
-    setTimeout(() => { state.isComplete = true; render(); }, 600);
-  }
-}
+        // Calculate per-subreddit average score for normalization
+        const subScores = {};
+        state.posts.forEach((p) => {
+          if (!subScores[p.subreddit])
+            subScores[p.subreddit] = { total: 0, count: 0 };
+          subScores[p.subreddit].total += p.score;
+          subScores[p.subreddit].count += 1;
+        });
 
-function resetDigest() {
-  state.readPosts.clear();
-  state.isComplete = false;
-  saveRead();
-  fetchAllPosts(true);
-}
+        const subAvg = {};
+        for (const [sub, data] of Object.entries(subScores)) {
+          subAvg[sub] = data.count > 0 ? data.total / data.count : 1;
+        }
 
-function addSubreddit(name) {
-  const clean = name.trim().toLowerCase().replace(/^r\//, '');
-  if (clean && !state.subreddits.includes(clean)) {
-    state.subreddits.push(clean);
-    state.tiers[clean] = 'regular';
-    saveSubs();
-    saveTiers();
-    render();
-  }
-}
+        const scored = unread.map((p) => {
+          const avg = subAvg[p.subreddit] || 1;
+          const rawFactor = Math.log10(Math.max(p.score, 1)) / 5;
+          const field = state.sortBy === "comments" ? p.comments : p.score;
+          const fieldAvg =
+            state.sortBy === "comments"
+              ? subScores[p.subreddit]?.count > 0
+                ? state.posts
+                    .filter((x) => x.subreddit === p.subreddit)
+                    .reduce((s, x) => s + x.comments, 0) /
+                  subScores[p.subreddit].count
+                : 1
+              : avg;
+          const fieldNorm = field / Math.max(fieldAvg, 1);
 
-function removeSubreddit(name) {
-  state.subreddits = state.subreddits.filter(s => s !== name);
-  delete state.tiers[name];
-  saveSubs();
-  saveTiers();
-  render();
-}
+          // Time decay
+          const hoursOld = Math.max(
+            (Date.now() / 1000 - p.created) / 3600,
+            0.5,
+          );
+          const timeFactor = 1 / Math.pow(hoursOld, 0.4);
 
-function cycleTier(name) {
-  const current = getSubTier(name);
-  const idx = TIER_CYCLE.indexOf(current);
-  state.tiers[name] = TIER_CYCLE[(idx + 1) % TIER_CYCLE.length];
-  saveTiers();
-  render();
-}
+          // Base blend: 50% normalized score, 20% raw magnitude, 30% time freshness
+          const baseBlend =
+            fieldNorm * 0.5 + rawFactor * 0.2 + timeFactor * 3 * 0.3;
 
-function setSortBy(val) {
-  state.sortBy = val;
-  savePrefs();
-  render();
-}
+          // Apply tier boost
+          const tier = getSubTier(p.subreddit);
+          const boost = TIER_CONFIG[tier]?.boost || 1.0;
+          const blended = baseBlend * boost;
 
-function setDigestSize(val) {
-  state.digestSize = val;
-  savePrefs();
-  render();
-}
+          return { ...p, _blended: blended, _tier: tier };
+        });
 
-function setTimeRange(val) {
-  state.timeRange = val;
-  savePrefs();
-  render();
-}
+        scored.sort((a, b) => b._blended - a._blended);
 
-function toggleSettings() {
-  state.settingsOpen = !state.settingsOpen;
-  render();
-}
+        // Enforce per-sub cap based on tier
+        const subCount = {};
+        return scored
+          .filter((p) => {
+            const max = TIER_CONFIG[p._tier]?.maxPosts || 2;
+            subCount[p.subreddit] = (subCount[p.subreddit] || 0) + 1;
+            return subCount[p.subreddit] <= max;
+          })
+          .slice(0, state.digestSize);
+      }
 
-// ═══════════════════════════════════════════
-// RENDER
-// ═══════════════════════════════════════════
-function render() {
-  const posts = getSortedPosts();
-  const now = new Date();
-  const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+      // ═══════════════════════════════════════════
+      // ACTIONS
+      // ═══════════════════════════════════════════
+      function markRead(id) {
+        state.readPosts.add(id);
+        saveRead();
+        track("engagement", "post_clicked", { postId: id });
+        const el = document.querySelector(`.post-card[data-post-id="${id}"]`);
+        if (el) el.classList.add("read");
+        // Update header count
+        updateHeaderCount();
+      }
 
-  const unreadCount = posts.length;
+      function markAllRead() {
+        const count = state.posts.length;
+        state.posts.forEach((p) => state.readPosts.add(p.id));
+        saveRead();
+        track("engagement", "mark_all_read", { postCount: count });
+        render();
+      }
 
-  // Show when data was last fetched
-  let fetchInfo = '';
-  if (state.lastFetch) {
-    const ago = Date.now() - new Date(state.lastFetch).getTime();
-    if (ago < 60000) fetchInfo = 'just now';
-    else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
-    else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
-  }
+      function checkCompletion() {
+        const posts = getSortedPosts();
+        if (posts.length > 0 && posts.every((p) => state.readPosts.has(p.id))) {
+          setTimeout(() => {
+            state.isComplete = true;
+            render();
+          }, 600);
+        }
+      }
 
-  let html = `
+      function resetDigest() {
+        state.readPosts.clear();
+        state.isComplete = false;
+        saveRead();
+        fetchAllPosts(true);
+      }
+
+      function addSubreddit(name) {
+        const clean = name.trim().toLowerCase().replace(/^r\//, "");
+        if (clean && !state.subreddits.includes(clean)) {
+          state.subreddits.push(clean);
+          state.tiers[clean] = "regular";
+          saveSubs();
+          saveTiers();
+          render();
+        }
+      }
+
+      function removeSubreddit(name) {
+        state.subreddits = state.subreddits.filter((s) => s !== name);
+        delete state.tiers[name];
+        saveSubs();
+        saveTiers();
+        render();
+      }
+
+      function cycleTier(name) {
+        const current = getSubTier(name);
+        const idx = TIER_CYCLE.indexOf(current);
+        state.tiers[name] = TIER_CYCLE[(idx + 1) % TIER_CYCLE.length];
+        saveTiers();
+        render();
+      }
+
+      function setSortBy(val) {
+        state.sortBy = val;
+        savePrefs();
+        render();
+      }
+
+      function setDigestSize(val) {
+        state.digestSize = val;
+        savePrefs();
+        render();
+      }
+
+      function setTimeRange(val) {
+        state.timeRange = val;
+        savePrefs();
+        render();
+      }
+
+      function toggleSettings() {
+        state.settingsOpen = !state.settingsOpen;
+        render();
+      }
+
+      // ═══════════════════════════════════════════
+      // RENDER
+      // ═══════════════════════════════════════════
+      function render() {
+        const posts = getSortedPosts();
+        const now = new Date();
+        const dateStr = now.toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        });
+
+        const unreadCount = posts.length;
+
+        // Show when data was last fetched
+        let fetchInfo = "";
+        if (state.lastFetch) {
+          const ago = Date.now() - new Date(state.lastFetch).getTime();
+          if (ago < 60000) fetchInfo = "just now";
+          else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + "m ago";
+          else fetchInfo = Math.floor(ago / 3600000) + "h ago";
+        }
+
+        let html = `
     <header>
       <div class="header-inner">
         <div class="header-top">
           <div>
             <div class="logo">briefing</div>
-            <div class="header-meta">${dateStr} · ${unreadCount} new${fetchInfo ? ' · updated ' + fetchInfo : ''}</div>
+            <div class="header-meta">${dateStr} · ${unreadCount} new${fetchInfo ? " · updated " + fetchInfo : ""}</div>
           </div>
           <div class="header-actions">
             <button class="btn-small" onclick="markAllRead()">mark all read</button>
@@ -695,22 +1120,36 @@ function render() {
           </div>
         </div>
 
-        <div class="settings ${state.settingsOpen ? 'open' : ''}">
+        <div class="settings ${state.settingsOpen ? "open" : ""}">
           <div class="settings-inner">
             <div class="setting-row">
               <span class="setting-label">sort by</span>
               <div class="setting-options">
-                ${[['score','top'],['comments','discussed'],['new','newest']].map(([val, label]) =>
-                  `<button class="pill ${state.sortBy===val?'active':''}" onclick="setSortBy('${val}')">${label}</button>`
-                ).join('')}
+                ${[
+                  ["score", "top"],
+                  ["comments", "discussed"],
+                  ["new", "newest"],
+                ]
+                  .map(
+                    ([val, label]) =>
+                      `<button class="pill ${state.sortBy === val ? "active" : ""}" onclick="setSortBy('${val}')">${label}</button>`,
+                  )
+                  .join("")}
               </div>
             </div>
             <div class="setting-row">
               <span class="setting-label">time range</span>
               <div class="setting-options">
-                ${[['hot','hot'],['day','today'],['week','this week']].map(([val, label]) =>
-                  `<button class="pill ${state.timeRange===val?'active':''}" onclick="setTimeRange('${val}')">${label}</button>`
-                ).join('')}
+                ${[
+                  ["hot", "hot"],
+                  ["day", "today"],
+                  ["week", "this week"],
+                ]
+                  .map(
+                    ([val, label]) =>
+                      `<button class="pill ${state.timeRange === val ? "active" : ""}" onclick="setTimeRange('${val}')">${label}</button>`,
+                  )
+                  .join("")}
               </div>
             </div>
             <div class="setting-row">
@@ -723,23 +1162,27 @@ function render() {
               </div>
             </div>
             <div class="sub-tags">
-              ${TIER_CYCLE.map(tier => {
+              ${TIER_CYCLE.map((tier) => {
                 const cfg = TIER_CONFIG[tier];
-                const subsInTier = state.subreddits.filter(s => getSubTier(s) === tier);
-                if (subsInTier.length === 0) return '';
+                const subsInTier = state.subreddits.filter(
+                  (s) => getSubTier(s) === tier,
+                );
+                if (subsInTier.length === 0) return "";
                 return `<div class="tier-group">
                   <span class="tier-label">${tier}</span>
                   <div class="tier-subs">
-                    ${subsInTier.map(sub => {
-                      const c = getSubColor(sub);
-                      return `<span class="sub-tag" style="color:${c};border-color:${c}">
+                    ${subsInTier
+                      .map((sub) => {
+                        const c = getSubColor(sub);
+                        return `<span class="sub-tag" style="color:${c};border-color:${c}">
                         <span class="tier-indicator" onclick="cycleTier('${escapeHtml(sub)}')" title="click to change tier">${cfg.label}</span>
                         r/${escapeHtml(sub)}<span class="remove-sub" onclick="removeSubreddit('${escapeHtml(sub)}')">&times;</span>
                       </span>`;
-                    }).join('')}
+                      })
+                      .join("")}
                   </div>
                 </div>`;
-              }).join('')}
+              }).join("")}
             </div>
           </div>
         </div>
@@ -747,25 +1190,30 @@ function render() {
     </header>
   `;
 
-  // Loading
-  if (state.loading) {
-    html += `<div class="loading-state">
+        // Loading
+        if (state.loading) {
+          html += `<div class="loading-state">
       <div class="spinner"></div>
-      <span class="loading-text">fetching your digest…${state.loadingProgress ? ` (${state.loadingProgress})` : ''}</span>
+      <span class="loading-text">fetching your digest…${state.loadingProgress ? ` (${state.loadingProgress})` : ""}</span>
     </div>`;
-    document.getElementById('app').innerHTML = html;
-    return;
-  }
+          document.getElementById("app").innerHTML = html;
+          return;
+        }
 
-  // Error
-  if (state.error) {
-    html += `<div class="error-banner">${escapeHtml(state.error)}</div>`;
-  }
+        // Error
+        if (state.error) {
+          html += `<div class="error-banner">${escapeHtml(state.error)}</div>`;
+        }
 
-  // All caught up screen — when we have fetched posts but none are unread
-  if (!state.loading && state.posts.length > 0 && unreadCount === 0 && !state.error) {
-    // Still render the header, then show caught up
-    html += `<div class="completion">
+        // All caught up screen — when we have fetched posts but none are unread
+        if (
+          !state.loading &&
+          state.posts.length > 0 &&
+          unreadCount === 0 &&
+          !state.error
+        ) {
+          // Still render the header, then show caught up
+          html += `<div class="completion">
       <pre class="ascii-art">
     .---.
    / o o )
@@ -779,13 +1227,13 @@ function render() {
       <p>Nothing new from your ${state.subreddits.length} subreddits. Check back later.</p>
       <button onclick="fetchAllPosts(true)">check now</button>
     </div>`;
-    document.getElementById('app').innerHTML = html;
-    return;
-  }
+          document.getElementById("app").innerHTML = html;
+          return;
+        }
 
-  // Empty state — no posts fetched at all
-  if (!state.loading && state.posts.length === 0 && !state.error) {
-    html += `<div class="empty-state">
+        // Empty state — no posts fetched at all
+        if (!state.loading && state.posts.length === 0 && !state.error) {
+          html += `<div class="empty-state">
       <pre class="ascii-art">
     .--.
    / o o )
@@ -798,15 +1246,15 @@ function render() {
       <h3>nothing here yet</h3>
       <p>hit refresh to fetch the good stuff,<br>or add subreddits in settings.</p>
     </div>`;
-    document.getElementById('app').innerHTML = html;
-    return;
-  }
+          document.getElementById("app").innerHTML = html;
+          return;
+        }
 
-  // Post cards
-  posts.forEach((post, i) => {
-    const c = getSubColor(post.subreddit);
+        // Post cards
+        posts.forEach((post, i) => {
+          const c = getSubColor(post.subreddit);
 
-    html += `
+          html += `
     <div class="post-card" data-post-id="${post.id}" style="animation-delay:${i * 40}ms">
       <div class="post-layout">
         <div class="post-score">
@@ -816,12 +1264,12 @@ function render() {
         <div class="post-content">
           <div class="post-meta">
             <span class="post-sub" style="background:${c}15;color:${c}">r/${escapeHtml(post.subreddit)}</span>
-            ${post.flair ? `<span class="post-flair">${escapeHtml(post.flair)}</span>` : ''}
+            ${post.flair ? `<span class="post-flair">${escapeHtml(post.flair)}</span>` : ""}
             <span class="post-time">${timeAgo(post.created)} · u/${escapeHtml(post.author)}</span>
           </div>
           <a class="post-title" href="${post.is_self ? escapeHtml(post.permalink) : escapeHtml(post.url)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')">${escapeHtml(post.title)}</a>
-          ${post.selftext ? `<div class="post-selftext" style="border-color:${c}40">${escapeHtml(post.selftext)}${post.selftext.length >= 300 ? '…' : ''}</div>` : ''}
-          ${post.preview && (post.post_hint === 'image' || post.post_hint === 'rich:video' || post.post_hint === 'link') ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.preview)}" alt="" loading="lazy"></a>` : (post.thumbnail && !post.selftext ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.thumbnail)}" alt="" loading="lazy"></a>` : '')}
+          ${post.selftext ? `<div class="post-selftext" style="border-color:${c}40">${escapeHtml(post.selftext)}${post.selftext.length >= 300 ? "…" : ""}</div>` : ""}
+          ${post.preview && (post.post_hint === "image" || post.post_hint === "rich:video" || post.post_hint === "link") ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.preview)}" alt="" loading="lazy"></a>` : post.thumbnail && !post.selftext ? `<a href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener" onclick="markRead('${post.id}')"><img class="post-thumbnail" src="${escapeHtml(post.thumbnail)}" alt="" loading="lazy"></a>` : ""}
           <div class="post-footer">
             <a class="post-comments" href="${escapeHtml(post.permalink)}" target="_blank" rel="noopener">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -829,91 +1277,108 @@ function render() {
               </svg>
               ${post.comments} comments
             </a>
-            ${!post.is_self ? `<a class="post-link" href="${escapeHtml(post.url)}" target="_blank" rel="noopener">${escapeHtml(post.domain)}</a>` : ''}
+            ${!post.is_self ? `<a class="post-link" href="${escapeHtml(post.url)}" target="_blank" rel="noopener">${escapeHtml(post.domain)}</a>` : ""}
           </div>
         </div>
       </div>
     </div>`;
-  });
+        });
 
-  html += `<div class="end-marker">— end of digest —</div>`;
+        html += `<div class="end-marker">— end of digest —</div>`;
 
-  document.getElementById('app').innerHTML = html;
-  attachScrollObserver();
-}
+        document.getElementById("app").innerHTML = html;
+        attachScrollObserver();
+      }
 
-// ═══════════════════════════════════════════
-// SCROLL-BASED AUTO-READ
-// ═══════════════════════════════════════════
-let scrollObserver = null;
+      // ═══════════════════════════════════════════
+      // SCROLL-BASED AUTO-READ
+      // ═══════════════════════════════════════════
+      let scrollObserver = null;
 
-function attachScrollObserver() {
-  // Disconnect previous observer
-  if (scrollObserver) scrollObserver.disconnect();
+      function attachScrollObserver() {
+        // Disconnect previous observer
+        if (scrollObserver) scrollObserver.disconnect();
 
-  scrollObserver = new IntersectionObserver((entries) => {
-    let changed = false;
-    entries.forEach(entry => {
-      const id = entry.target.dataset.postId;
-      if (!id) return;
-      if (!entry.isIntersecting && entry.boundingClientRect.bottom < 100) {
-        if (!state.readPosts.has(id)) {
-          state.readPosts.add(id);
-          entry.target.classList.add('read');
-          changed = true;
+        scrollObserver = new IntersectionObserver(
+          (entries) => {
+            let changed = false;
+            entries.forEach((entry) => {
+              const id = entry.target.dataset.postId;
+              if (!id) return;
+              if (
+                !entry.isIntersecting &&
+                entry.boundingClientRect.bottom < 100
+              ) {
+                if (!state.readPosts.has(id)) {
+                  state.readPosts.add(id);
+                  entry.target.classList.add("read");
+                  changed = true;
+                }
+              }
+            });
+            if (changed) {
+              saveRead();
+              updateHeaderCount();
+            }
+          },
+          {
+            threshold: 0,
+            rootMargin: "0px 0px 0px 0px",
+          },
+        );
+
+        document.querySelectorAll(".post-card:not(.read)").forEach((el) => {
+          scrollObserver.observe(el);
+        });
+      }
+
+      function updateHeaderCount() {
+        const unread = state.posts.filter(
+          (p) => !state.readPosts.has(p.id),
+        ).length;
+        const meta = document.querySelector(".header-meta");
+        if (meta) {
+          const now = new Date();
+          const dateStr = now.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+          });
+          let fetchInfo = "";
+          if (state.lastFetch) {
+            const ago = Date.now() - new Date(state.lastFetch).getTime();
+            if (ago < 60000) fetchInfo = "just now";
+            else if (ago < 3600000)
+              fetchInfo = Math.floor(ago / 60000) + "m ago";
+            else fetchInfo = Math.floor(ago / 3600000) + "h ago";
+          }
+          meta.textContent = `${dateStr} · ${unread} new${fetchInfo ? " · updated " + fetchInfo : ""}`;
         }
       }
-    });
-    if (changed) {
-      saveRead();
-      updateHeaderCount();
-    }
-  }, {
-    threshold: 0,
-    rootMargin: '0px 0px 0px 0px'
-  });
 
-  document.querySelectorAll('.post-card:not(.read)').forEach(el => {
-    scrollObserver.observe(el);
-  });
-}
+      // ═══════════════════════════════════════════
+      // SCROLL POSITION SAVE/RESTORE
+      // ═══════════════════════════════════════════
+      window.addEventListener(
+        "scroll",
+        () => {
+          sessionStorage.setItem("briefing_scroll", window.scrollY);
+        },
+        { passive: true },
+      );
 
-function updateHeaderCount() {
-  const unread = state.posts.filter(p => !state.readPosts.has(p.id)).length;
-  const meta = document.querySelector('.header-meta');
-  if (meta) {
-    const now = new Date();
-    const dateStr = now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-    let fetchInfo = '';
-    if (state.lastFetch) {
-      const ago = Date.now() - new Date(state.lastFetch).getTime();
-      if (ago < 60000) fetchInfo = 'just now';
-      else if (ago < 3600000) fetchInfo = Math.floor(ago / 60000) + 'm ago';
-      else fetchInfo = Math.floor(ago / 3600000) + 'h ago';
-    }
-    meta.textContent = `${dateStr} · ${unread} new${fetchInfo ? ' · updated ' + fetchInfo : ''}`;
-  }
-}
+      function restoreScroll() {
+        const saved = sessionStorage.getItem("briefing_scroll");
+        if (saved) {
+          requestAnimationFrame(() => window.scrollTo(0, parseInt(saved)));
+        }
+      }
 
-// ═══════════════════════════════════════════
-// SCROLL POSITION SAVE/RESTORE
-// ═══════════════════════════════════════════
-window.addEventListener('scroll', () => {
-  sessionStorage.setItem('briefing_scroll', window.scrollY);
-}, { passive: true });
-
-function restoreScroll() {
-  const saved = sessionStorage.getItem('briefing_scroll');
-  if (saved) {
-    requestAnimationFrame(() => window.scrollTo(0, parseInt(saved)));
-  }
-}
-
-// ═══════════════════════════════════════════
-// INIT
-// ═══════════════════════════════════════════
-render();
-fetchAllPosts().then(() => restoreScroll());
-</script>
-</body>
+      // ═══════════════════════════════════════════
+      // INIT
+      // ═══════════════════════════════════════════
+      render();
+      fetchAllPosts().then(() => restoreScroll());
+    </script>
+  </body>
 </html>
